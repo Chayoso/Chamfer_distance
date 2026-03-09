@@ -32,7 +32,6 @@ This repository implements a **coupled reverse-smooth Chamfer distance** approac
 │   ├── pairwise_physics_only/  # Physics-only baselines
 │   ├── pairwise_rev_smooth/    # Reverse-smooth configs
 │   ├── dcd_ppc4/               # DCO/DCD baseline configs
-│   ├── coupled_ppc4/           # Coupled PPC=4 configs
 │   ├── ablation_*.yaml         # Ablation study configs
 │   └── teaser_*.yaml           # Teaser figure configs
 ├── tools/                 # Experiment & visualization scripts

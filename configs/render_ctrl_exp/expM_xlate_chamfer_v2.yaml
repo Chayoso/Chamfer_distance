@@ -1,0 +1,148 @@
+# Experiment M-XLATE-CHAMFER-V2: Physics + Proper Two-sided Chamfer x_late
+#
+# KEY FIXES over v1:
+#   1. Two-sided Chamfer as OPTIMIZATION LOSS (not just measurement)
+#      → prevents particle-stealing (s→t pulling particles away from t→s coverage)
+#   2. chamfer_adam_steps: 20  (vs 1 in v1) → much stronger correction
+#   3. alpha_chamfer_xlate: 0.1  (vs 0.01 in v1) → faster convergence
+#
+# Expected: Physics+CD two-sided Chamfer < Physics-only (0.1236)
+# Story: Physics gives physically plausible coarse shape,
+#        Two-sided CD correction pushes past physics plateau
+
+input_mesh_path: "assets/isosphere.obj"
+target_mesh_path: "assets/bunny.obj"
+output_dir: "output/render_ctrl/expM_xlate_chamfer_v2/"
+
+simulation:
+  grid_dx: 1
+  points_per_cell_cuberoot: 4
+  grid_min_point: [-16.0, -16.0, -16.0]
+  grid_max_point: [16.0, 16.0, 16.0]
+  lam: 38888.89
+  mu: 58333.3
+  density: 75.0
+  dt: 0.00833333333
+  drag: 0.5
+  external_force: [0.0, 0.0, 0.0]
+  smoothing_factor: 0.955
+
+optimization:
+  num_animations: 40
+  num_timesteps: 10
+  control_stride: 1
+  num_passes: 3
+  max_gd_iters: 1
+  max_ls_iters: 5
+  initial_alpha: 0.01
+  adaptive_alpha_enabled: true
+  adaptive_alpha_target_norm: 2500.0
+  adaptive_alpha_min_scale: 0.1
+  gd_tol: 0.0
+  use_session_mode: true
+  use_pcgrad: false
+  pcgrad_threshold: -0.1
+  w_render_base: 0.0
+  j_barrier_weight: 0.0
+  j_barrier_target: 0.8
+  render_adam_enabled: false
+  alpha_render: 1e-3
+  lsrc_enabled: false
+  xlate_enabled: false          # C++ x_late DISABLED
+  py_xlate_enabled: true        # Apply x_late at render time (Chamfer handles update)
+  alpha_py_xlate: 0.01
+  chamfer_xlate_enabled: true   # KEY: Chamfer-based update (replaces render grad update)
+  alpha_chamfer_xlate: 0.1      # Adam lr (10× higher than v1: 0.01→0.1)
+  chamfer_start_ep: 5           # Start updates after physics partially converges
+  chamfer_two_sided: true       # Two-sided Chamfer LOSS (not just measurement)
+  chamfer_adam_steps: 20        # Adam steps per episode (20× more than v1)
+
+  loss:
+    enabled: true
+    w_alpha: 2.0
+    w_depth: 0.0
+    w_photo: 0.0
+    w_edge: 0.0
+    w_cov_align: 0.0
+    w_cov_reg: 0.01
+    w_det_barrier: 0.0
+    cov_reg_mode: 'eigenvalue'
+    schedule: 'constant'
+
+upsample:
+  use_simple_pipeline: true
+  render_loss_weight: 1.0
+
+  debug:
+    verbose: false
+
+  covariance:
+    use_curvature_for_target: true
+    sigma_isotropic: 0.038
+    curvature_sigma:
+      sigma_n0: 0.02
+      sigma_t0: 0.03
+      a: 12.0
+      b: 5.0
+      a_n: 3
+      u: 3
+      k_floor_normal: 0.002
+      k_floor_tangent: 0.005
+    sigma0: 0.25
+    k_F: 32
+    use_multiscale_F: true
+    k_F_coarse: 64
+    k_F_fine: 16
+    multiscale_blend_mode: 'adaptive'
+    enable_subdivision: true
+    subdivision_target: 100000
+    subdivision_jitter: 0.15
+    sv_min: 0.60
+    sv_max: 1.30
+    use_F_smoothing: false
+
+camera:
+  width: 640
+  height: 360
+  fx: 237.5
+  fy: 237.5
+  cx: 320.0
+  cy: 180.0
+  znear: 0.01
+  zfar: 100.0
+  lookat:
+    eye: [20.0, -25.0, 12.5]
+    target: [0.0, 0.0, 0.0]
+    up: [0.0, 0.0, 1.0]
+
+cameras:
+  - eye: [-25.0, 20.0, 12.5]
+    target: [0.0, 0.0, 0.0]
+    up: [0.0, 0.0, 1.0]
+  - eye: [25.0, 20.0, 12.5]
+    target: [0.0, 0.0, 0.0]
+    up: [0.0, 0.0, 1.0]
+  - eye: [0.0, -30.0, 20.0]
+    target: [0.0, 0.0, 0.0]
+    up: [0.0, 0.0, 1.0]
+  - eye: [0.0, 25.0, -15.0]
+    target: [0.0, 0.0, 0.0]
+    up: [0.0, 1.0, 0.0]
+
+render:
+  num_frames: 1
+  schedule: uniform
+  bg: [1.0, 1.0, 1.0]
+  training_resolution_scale: 0.5
+  particle_color: [0.27, 0.51, 0.71]
+  surface_mask_ratio: 0.20
+  surface_mask_mode: 'last'
+  lighting:
+    model: phong
+    type: directional
+    direction: [0.3, -0.5, 0.8]
+    two_sided: true
+    ambient: 0.18
+    diffuse: 0.85
+    specular: 0.10
+    shininess: 32
