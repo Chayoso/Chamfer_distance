@@ -1,0 +1,30 @@
+# DCD experiment PPC=4: sphere -> dragon
+input_mesh_path: "assets/isosphere.obj"
+target_mesh_path: "assets/dragon.obj"
+output_dir: "output/dcd_ppc4/dragon/"
+simulation:
+  grid_dx: 1
+  points_per_cell_cuberoot: 4
+  grid_min_point: [-16.0, -16.0, -16.0]
+  grid_max_point: [16.0, 16.0, 16.0]
+  lam: 38888.89
+  mu: 58333.3
+  density: 75.0
+  dt: 0.00833333333
+  drag: 0.5
+  external_force: [0.0, 0.0, 0.0]
+  smoothing_factor: 0.955
+optimization:
+  num_animations: 40
+  num_timesteps: 10
+  control_stride: 1
+  num_passes: 3
+  max_gd_iters: 1
+  max_ls_iters: 5
+  initial_alpha: 0.01
+  adaptive_alpha_enabled: true
+  adaptive_alpha_target_norm: 2500.0
+  adaptive_alpha_min_scale: 0.1
+  gd_tol: 0.0
+  use_session_mode: true
+  w_chamfer: 0.0

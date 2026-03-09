@@ -1,0 +1,22 @@
+[build-system]
+requires = [
+  "setuptools>=68",
+  "wheel",
+  "pybind11>=2.11",
+  "build>=1.0.0"
+]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "diffmpm"
+version = "2.3.0"
+description = "Python bindings for DiffMPM (release-optimized)"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [{ name = "Changyong Song" }]
+dependencies = ["numpy", "pybind11", "pyyaml"]
+
+[tool.setuptools]
+packages = []
+
+[tool.setuptools.dynamic]

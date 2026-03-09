@@ -1,0 +1,137 @@
+# Ablation: ablation_dragon_kappa1 (sphere->dragon)
+camera:
+  cx: 320.0
+  cy: 180.0
+  fx: 237.5
+  fy: 237.5
+  height: 360
+  lookat:
+    eye:
+    - 20.0
+    - -25.0
+    - 12.5
+    target:
+    - 0.0
+    - 0.0
+    - 0.0
+    up:
+    - 0.0
+    - 0.0
+    - 1.0
+  width: 640
+  zfar: 100.0
+  znear: 0.01
+cameras:
+- eye:
+  - -25.0
+  - 20.0
+  - 12.5
+  target:
+  - 0.0
+  - 0.0
+  - 0.0
+  up:
+  - 0.0
+  - 0.0
+  - 1.0
+input_mesh_path: assets/isosphere.obj
+optimization:
+  adaptive_alpha_enabled: true
+  adaptive_alpha_min_scale: 0.1
+  adaptive_alpha_target_norm: 2500.0
+  chamfer_early_stop_patience: 8
+  chamfer_huber_delta: 1.5
+  chamfer_in_callback: false
+  chamfer_ramp_ep: 10
+  chamfer_rev_clamp_ratio: 1.0
+  chamfer_rev_mode: coupled
+  chamfer_rev_smooth: true
+  chamfer_rev_smooth_radius: 2.0
+  chamfer_rev_weight: 1.0
+  chamfer_start_ep: 5
+  control_stride: 1
+  gd_tol: 0.0
+  initial_alpha: 0.01
+  j_barrier_target: 0.8
+  j_barrier_weight: 0.0
+  loss:
+    enabled: true
+    schedule: constant
+    w_alpha: 0.0
+    w_cov_align: 0.0
+    w_cov_reg: 0.0
+    w_depth: 0.0
+    w_det_barrier: 0.0
+    w_edge: 0.0
+    w_photo: 0.0
+  max_gd_iters: 1
+  max_ls_iters: 5
+  num_animations: 40
+  num_passes: 3
+  num_timesteps: 10
+  physics_weight_final: 0.5
+  physics_weight_ramp_ep: 5
+  physics_weight_start_ep: 15
+  render_adam_enabled: false
+  smoothing_start_ep: 15
+  smoothing_value: 0.7
+  use_pcgrad: false
+  use_session_mode: true
+  w_chamfer: 10.0
+  w_render_base: 0.0
+output_dir: output/ablation_dragon_kappa1/
+render:
+  bg:
+  - 1.0
+  - 1.0
+  - 1.0
+  num_frames: 1
+  particle_color:
+  - 0.27
+  - 0.51
+  - 0.71
+  schedule: uniform
+  surface_mask_mode: last
+  surface_mask_ratio: 0.2
+  training_resolution_scale: 0.5
+simulation:
+  density: 75.0
+  drag: 0.5
+  dt: 0.00833333333
+  external_force:
+  - 0.0
+  - 0.0
+  - 0.0
+  grid_dx: 1
+  grid_max_point:
+  - 16.0
+  - 16.0
+  - 16.0
+  grid_min_point:
+  - -16.0
+  - -16.0
+  - -16.0
+  lam: 38888.89
+  mu: 58333.3
+  points_per_cell_cuberoot: 3
+  smoothing_factor: 0.955
+target_mesh_path: assets/dragon.obj
+upsample:
+  covariance:
+    enable_subdivision: true
+    k_F: 32
+    k_F_coarse: 64
+    k_F_fine: 16
+    multiscale_blend_mode: adaptive
+    sigma0: 0.25
+    sigma_isotropic: 0.038
+    subdivision_jitter: 0.15
+    subdivision_target: 100000
+    sv_max: 1.3
+    sv_min: 0.6
+    use_curvature_for_target: true
+    use_multiscale_F: true
+  debug:
+    verbose: false
+  render_loss_weight: 1.0
+  use_simple_pipeline: true
