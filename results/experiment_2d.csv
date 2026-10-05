@@ -1,0 +1,4 @@
+method,two_sided_cd,coverage_pct,cluster_fraction_pct,paper_cd,paper_cov,paper_cluster
+DCO,0.3530987799167633,15.0,91.66666666666666,0.352,38,97
+DCO + repulsion,0.34996914863586426,15.0,90.0,0.299,50,97
+Shared-basis (Fourier),0.1394583135843277,55.00000000000001,100.0,0.123,62,81

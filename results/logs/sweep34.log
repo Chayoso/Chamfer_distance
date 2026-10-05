@@ -1,0 +1,149 @@
+warning: Git tree '/home/gabri/research/eccv-chamfer' is dirty
+[     0.5s] === config 20K / 24f / grid32 ===
+[    91.4s] frame 1/24 cd=1.1443
+[   124.7s] frame 2/24 cd=0.9345
+[   157.3s] frame 3/24 cd=0.7531
+[   190.6s] frame 4/24 cd=0.6028
+[   224.5s] frame 5/24 cd=0.4846
+[   258.2s] frame 6/24 cd=0.3961
+[   292.8s] frame 7/24 cd=0.3322
+[   325.7s] frame 8/24 cd=0.2887
+[   358.5s] frame 9/24 cd=0.2599
+[   391.1s] frame 10/24 cd=0.2419
+[   423.8s] frame 11/24 cd=0.2305
+[   456.5s] frame 12/24 cd=0.2229
+[   489.9s] frame 13/24 cd=0.2187
+[   522.9s] frame 14/24 cd=0.2163
+[   555.4s] frame 15/24 cd=0.2145
+[   587.6s] frame 16/24 cd=0.2128
+[   620.3s] frame 17/24 cd=0.2114
+[   652.9s] frame 18/24 cd=0.2105
+[   685.7s] frame 19/24 cd=0.2099
+[   718.2s] frame 20/24 cd=0.2095
+[   751.1s] frame 21/24 cd=0.2091
+[   783.8s] frame 22/24 cd=0.2088
+[   816.2s] frame 23/24 cd=0.2085
+[   848.8s] frame 24/24 cd=0.2082
+[   848.8s]   calib step=1.2: physics CD=0.0174 (normalized)
+[   881.3s] frame 1/24 cd=0.9326
+[   913.7s] frame 2/24 cd=0.5463
+[   946.2s] frame 3/24 cd=0.2976
+[   978.8s] frame 4/24 cd=0.2215
+[  1019.6s] frame 5/24 cd=0.2229
+[  1060.2s] frame 6/24 cd=0.2230
+[  1101.4s] frame 7/24 cd=0.2175
+[  1141.9s] frame 8/24 cd=0.2161
+[  1182.8s] frame 9/24 cd=0.2146
+[  1223.4s] frame 10/24 cd=0.2217
+[  1264.3s] frame 11/24 cd=0.2171
+[  1305.0s] frame 12/24 cd=0.2146
+[  1345.5s] frame 13/24 cd=0.2132
+[  1386.2s] frame 14/24 cd=0.2203
+[  1427.2s] frame 15/24 cd=0.2161
+[  1468.3s] frame 16/24 cd=0.2138
+[  1509.1s] frame 17/24 cd=0.2126
+[  1549.9s] frame 18/24 cd=0.2197
+[  1590.5s] frame 19/24 cd=0.2156
+[  1631.4s] frame 20/24 cd=0.2135
+[  1672.3s] frame 21/24 cd=0.2123
+[  1713.1s] frame 22/24 cd=0.2193
+[  1753.8s] frame 23/24 cd=0.2152
+[  1794.8s] frame 24/24 cd=0.2131
+[  1794.9s]   calib step=2.4: physics CD=0.0178 (normalized)
+[  1827.2s] frame 1/24 cd=0.5561
+[  1859.5s] frame 2/24 cd=0.2368
+[  1908.6s] frame 3/24 cd=0.2167
+[  1949.1s] frame 4/24 cd=0.2208
+[  1998.3s] frame 5/24 cd=0.2172
+[  2047.2s] frame 6/24 cd=0.2161
+[  2096.1s] frame 7/24 cd=0.2148
+[  2144.9s] frame 8/24 cd=0.2137
+[  2194.0s] frame 9/24 cd=0.2129
+[  2242.9s] frame 10/24 cd=0.2123
+[  2291.9s] frame 11/24 cd=0.2119
+[  2340.5s] frame 12/24 cd=0.2116
+[  2389.3s] frame 13/24 cd=0.2113
+[  2438.2s] frame 14/24 cd=0.2111
+[  2487.0s] frame 15/24 cd=0.2109
+[  2535.6s] frame 16/24 cd=0.2108
+[  2584.9s] frame 17/24 cd=0.2107
+[  2634.0s] frame 18/24 cd=0.2106
+[  2682.8s] frame 19/24 cd=0.2106
+[  2731.5s] frame 20/24 cd=0.2105
+[  2780.5s] frame 21/24 cd=0.2105
+[  2829.7s] frame 22/24 cd=0.2104
+[  2878.4s] frame 23/24 cd=0.2104
+[  2927.1s] frame 24/24 cd=0.2103
+[  2927.1s]   calib step=4.8: physics CD=0.0175 (normalized)
+[  2959.3s] frame 1/24 cd=1.1443
+[  2991.7s] frame 2/24 cd=0.9345
+[  3024.2s] frame 3/24 cd=0.7531
+[  3056.8s] frame 4/24 cd=0.6028
+[  3104.6s] frame 5/24 cd=0.4846
+[  3151.8s] frame 6/24 cd=0.3960
+[  3198.7s] frame 7/24 cd=0.3321
+[  3246.5s] frame 8/24 cd=0.2886
+[  3293.8s] frame 9/24 cd=0.2598
+[  3341.1s] frame 10/24 cd=0.2418
+[  3388.6s] frame 11/24 cd=0.2305
+[  3436.0s] frame 12/24 cd=0.2229
+[  3483.5s] frame 13/24 cd=0.2187
+[  3531.1s] frame 14/24 cd=0.2163
+[  3578.3s] frame 15/24 cd=0.2145
+[  3626.1s] frame 16/24 cd=0.2128
+[  3673.6s] frame 17/24 cd=0.2114
+[  3721.0s] frame 18/24 cd=0.2106
+[  3768.3s] frame 19/24 cd=0.2099
+[  3815.8s] frame 20/24 cd=0.2095
+[  3863.4s] frame 21/24 cd=0.2091
+[  3910.8s] frame 22/24 cd=0.2088
+[  3958.1s] frame 23/24 cd=0.2085
+[  4005.7s] frame 24/24 cd=0.2082
+[  4026.4s] DCO step 30/1200 fwd=1.8896 rev=1.7673 cd=2.5873
+[  4041.6s] DCO step 60/1200 fwd=1.6578 rev=1.3815 cd=2.1579
+[  4049.0s] DCO step 90/1200 fwd=1.4574 rev=0.9920 cd=1.7630
+[  4052.2s] DCO step 120/1200 fwd=1.2790 rev=0.6844 cd=1.4506
+[  4054.8s] DCO step 150/1200 fwd=1.1197 rev=0.4963 cd=1.2247
+[  4057.0s] DCO step 180/1200 fwd=0.9784 rev=0.4009 cd=1.0574
+[  4059.1s] DCO step 210/1200 fwd=0.8541 rev=0.3533 cd=0.9243
+[  4061.0s] DCO step 240/1200 fwd=0.7456 rev=0.3046 cd=0.8054
+[  4062.7s] DCO step 270/1200 fwd=0.6518 rev=0.2370 cd=0.6935
+[  4064.3s] DCO step 300/1200 fwd=0.5716 rev=0.1954 cd=0.6041
+[  4065.9s] DCO step 330/1200 fwd=0.5035 rev=0.1656 cd=0.5300
+[  4067.3s] DCO step 360/1200 fwd=0.4458 rev=0.1403 cd=0.4673
+[  4068.6s] DCO step 390/1200 fwd=0.3971 rev=0.1226 cd=0.4156
+[  4069.9s] DCO step 420/1200 fwd=0.3562 rev=0.1076 cd=0.3720
+[  4071.2s] DCO step 450/1200 fwd=0.3216 rev=0.0957 cd=0.3355
+[  4072.4s] DCO step 480/1200 fwd=0.2923 rev=0.0859 cd=0.3047
+[  4073.6s] DCO step 510/1200 fwd=0.2675 rev=0.0782 cd=0.2787
+[  4074.8s] DCO step 540/1200 fwd=0.2462 rev=0.0723 cd=0.2566
+[  4076.0s] DCO step 570/1200 fwd=0.2279 rev=0.0680 cd=0.2378
+[  4077.1s] DCO step 600/1200 fwd=0.2121 rev=0.0651 cd=0.2218
+[  4078.2s] DCO step 630/1200 fwd=0.1982 rev=0.0627 cd=0.2079
+[  4079.3s] DCO step 660/1200 fwd=0.1861 rev=0.0606 cd=0.1957
+[  4080.4s] DCO step 690/1200 fwd=0.1753 rev=0.0593 cd=0.1851
+[  4081.4s] DCO step 720/1200 fwd=0.1657 rev=0.0585 cd=0.1757
+[  4082.4s] DCO step 750/1200 fwd=0.1570 rev=0.0578 cd=0.1673
+[  4083.5s] DCO step 780/1200 fwd=0.1492 rev=0.0573 cd=0.1598
+[  4084.6s] DCO step 810/1200 fwd=0.1421 rev=0.0568 cd=0.1530
+[  4085.8s] DCO step 840/1200 fwd=0.1355 rev=0.0565 cd=0.1469
+[  4086.8s] DCO step 870/1200 fwd=0.1295 rev=0.0563 cd=0.1412
+[  4088.0s] DCO step 900/1200 fwd=0.1240 rev=0.0560 cd=0.1361
+[  4089.0s] DCO step 930/1200 fwd=0.1189 rev=0.0558 cd=0.1313
+[  4090.1s] DCO step 960/1200 fwd=0.1141 rev=0.0556 cd=0.1269
+[  4091.1s] DCO step 990/1200 fwd=0.1096 rev=0.0555 cd=0.1229
+[  4092.1s] DCO step 1020/1200 fwd=0.1054 rev=0.0554 cd=0.1191
+[  4093.1s] DCO step 1050/1200 fwd=0.1015 rev=0.0553 cd=0.1156
+[  4094.2s] DCO step 1080/1200 fwd=0.0979 rev=0.0552 cd=0.1124
+[  4095.4s] DCO step 1110/1200 fwd=0.0944 rev=0.0551 cd=0.1093
+[  4096.4s] DCO step 1140/1200 fwd=0.0911 rev=0.0551 cd=0.1065
+[  4097.6s] DCO step 1170/1200 fwd=0.0880 rev=0.0550 cd=0.1038
+[  4098.6s] DCO step 1200/1200 fwd=0.0851 rev=0.0550 cd=0.1013
+
+=== Physics-only vs joint vs DCO (CD / object scale) ===
+config              step    physics  joint   DCO     phys/DCO  joint/phys  minutes
+----------------------------------------------------------------------------------
+20K / 24f / grid32  1.2000  0.0174   0.0174  0.0084  2.0558    0.9999      67.4000
+[  4098.6s] === config 37K / 40f / grid32 (paper) ===
+/nix/store/ymxyxmqi9zwf50zfr9szlms7qbc91q9v-python3-3.14.7-env/lib/python3.14/multiprocessing/resource_tracker.py:475: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-u2s3hn6u'}
+  warnings.warn(

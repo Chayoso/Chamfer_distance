@@ -1,0 +1,88 @@
+warning: Git tree '/home/gabri/research/eccv-chamfer' is dirty
+[     0.3s] cuda=True device=NVIDIA RTX PRO 500 Blackwell Generation Laptop GPU
+[     9.0s] frame 1/1 cd=0.2672
+[    16.8s] DCO step 4/4 fwd=0.7284 rev=0.6999 cd=1.0101
+[    19.0s] frame 1/2 cd=0.2672
+[    19.4s] frame 2/2 cd=0.2153
+[    19.4s] N=800 MPM 2 frames cpu: 0.6s cd=0.05383
+[    21.8s] frame 1/2 cd=0.2672
+[    27.2s] frame 2/2 cd=0.2153
+[    27.2s] N=800 MPM 2 frames cuda: 6.1s cd=0.05383
+[    27.4s] DCO step 30/60 fwd=0.6434 rev=0.6163 cd=0.8909
+[    27.4s] DCO step 60/60 fwd=0.5575 rev=0.5158 cd=0.7595
+[    27.4s] N=800 DCO 60 steps cpu: 0.2s cd=0.18986
+[    27.9s] DCO step 30/60 fwd=0.6434 rev=0.6163 cd=0.8909
+[    28.3s] DCO step 60/60 fwd=0.5575 rev=0.5158 cd=0.7595
+[    28.3s] N=800 DCO 60 steps cuda: 0.8s cd=0.18986
+
+=== CPU vs GPU ===
+N    task          cpu_s   cuda_s  speedup  cpu_cd  cuda_cd
+-----------------------------------------------------------
+800  MPM 2 frames  0.6000  6.1000  0.1000   0.0538  0.0538 
+800  DCO 60 steps  0.2000  0.8000  0.2500   0.1899  0.1899 
+[    36.5s] frame 1/2 cd=0.3017
+[    37.4s] frame 2/2 cd=0.2327
+[    37.4s] N=3000 MPM 2 frames cpu: 1.3s cd=0.05817
+[    43.8s] frame 1/2 cd=0.3017
+[    45.6s] frame 2/2 cd=0.2327
+[    45.6s] N=3000 MPM 2 frames cuda: 2.6s cd=0.05817
+[    46.0s] DCO step 30/60 fwd=0.6301 rev=0.5953 cd=0.8669
+[    46.3s] DCO step 60/60 fwd=0.5489 rev=0.4787 cd=0.7283
+[    46.3s] N=3000 DCO 60 steps cpu: 0.7s cd=0.18208
+[    52.4s] DCO step 30/60 fwd=0.6301 rev=0.5953 cd=0.8669
+[    58.6s] DCO step 60/60 fwd=0.5489 rev=0.4787 cd=0.7283
+[    58.6s] N=3000 DCO 60 steps cuda: 12.3s cd=0.18208
+
+=== CPU vs GPU ===
+N     task          cpu_s   cuda_s   speedup  cpu_cd  cuda_cd
+-------------------------------------------------------------
+800   MPM 2 frames  0.6000  6.1000   0.1000   0.0538  0.0538 
+800   DCO 60 steps  0.2000  0.8000   0.2500   0.1899  0.1899 
+3000  MPM 2 frames  1.3000  2.6000   0.5000   0.0582  0.0582 
+3000  DCO 60 steps  0.7000  12.3000  0.0600   0.1821  0.1821 
+[    79.0s] frame 1/2 cd=0.7651
+[    84.3s] frame 2/2 cd=0.6252
+[    84.3s] N=8000 MPM 2 frames cpu: 8.5s cd=0.07816
+[   101.5s] frame 1/2 cd=0.7651
+[   109.4s] frame 2/2 cd=0.6252
+[   109.4s] N=8000 MPM 2 frames cuda: 9.8s cd=0.07816
+[   111.0s] DCO step 30/60 fwd=0.6304 rev=0.5937 cd=0.8660
+[   112.4s] DCO step 60/60 fwd=0.5521 rev=0.4705 cd=0.7254
+[   112.4s] N=8000 DCO 60 steps cpu: 3.0s cd=0.18136
+[   158.0s] DCO step 30/60 fwd=0.6304 rev=0.5937 cd=0.8660
+[   203.9s] DCO step 60/60 fwd=0.5521 rev=0.4705 cd=0.7254
+[   204.0s] N=8000 DCO 60 steps cuda: 91.5s cd=0.18136
+
+=== CPU vs GPU ===
+N     task          cpu_s   cuda_s   speedup  cpu_cd  cuda_cd
+-------------------------------------------------------------
+800   MPM 2 frames  0.6000  6.1000   0.1000   0.0538  0.0538 
+800   DCO 60 steps  0.2000  0.8000   0.2500   0.1899  0.1899 
+3000  MPM 2 frames  1.3000  2.6000   0.5000   0.0582  0.0582 
+3000  DCO 60 steps  0.7000  12.3000  0.0600   0.1821  0.1821 
+8000  MPM 2 frames  8.5000  9.8000   0.8700   0.0782  0.0782 
+8000  DCO 60 steps  3.0000  91.5000  0.0300   0.1814  0.1814 
+[   268.3s] frame 1/2 cd=1.2545
+[   315.7s] frame 2/2 cd=1.1464
+[   315.7s] N=20000 MPM 2 frames cuda: 57.3s cd=0.09553
+[   606.5s] DCO step 30/60 fwd=0.6299 rev=0.5891 cd=0.8624
+[   899.3s] DCO step 60/60 fwd=0.5526 rev=0.4604 cd=0.7193
+[   899.5s] N=20000 DCO 60 steps cuda: 583.7s cd=0.17982
+
+=== CPU vs GPU ===
+N      task          cpu_s   cuda_s    speedup  cpu_cd  cuda_cd
+---------------------------------------------------------------
+800    MPM 2 frames  0.6000  6.1000    0.1000   0.0538  0.0538 
+800    DCO 60 steps  0.2000  0.8000    0.2500   0.1899  0.1899 
+3000   MPM 2 frames  1.3000  2.6000    0.5000   0.0582  0.0582 
+3000   DCO 60 steps  0.7000  12.3000   0.0600   0.1821  0.1821 
+8000   MPM 2 frames  8.5000  9.8000    0.8700   0.0782  0.0782 
+8000   DCO 60 steps  3.0000  91.5000   0.0300   0.1814  0.1814 
+20000  MPM 2 frames  -       57.3000   -        -       0.0955 
+20000  DCO 60 steps  -       583.7000  -        -       0.1798 
+[  1040.4s] frame 1/2 cd=1.7177
+[  1202.4s] frame 2/2 cd=1.6387
+[  1202.4s] N=37000 MPM 2 frames cuda: 194.8s cd=0.10242
+[  2212.0s] DCO step 30/60 fwd=0.6304 rev=0.5871 cd=0.8615
+/nix/store/32jj7b8fiag8r53jnhy02d9azchmdfj4-python3-3.14.7-env/lib/python3.14/multiprocessing/resource_tracker.py:475: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-e4qct6uh'}
+  warnings.warn(

@@ -1,0 +1,74 @@
+
+=== Table 1: Regularization ablation (Sphere -> Bunny) ===
+condition                  s->t    t->s    two_sided  vs_DCO        seconds 
+----------------------------------------------------------------------------
+DCO (no reg.)              0.0186  0.0325  0.0375     --            7.2900  
++ Repulsion (lambda=0.01)  0.1225  0.0442  0.1303     worse         27.7900 
++ Repulsion (lambda=0.1)   0.3118  0.0760  0.3209     worse         28.4600 
++ Rep. + Smooth            0.3121  0.0755  0.3211     worse         42.9100 
++ Rep. + Smooth + Vol.     0.2804  0.1179  0.3042     worse         304.5500
+DCD                        0.0169  0.0333  0.0373     better        33.7400 
+Physics-only               0.1668  0.1462  0.2218     0.17x better  15.6900 
+
+Saved: /home/gabri/research/eccv-chamfer/src/results/table1_regularization.csv
+
+=== Table 2: Shape generalization (Sphere source), two-sided CD ===
+target  DCO     DCD     Physics  DCO/Phys  DCD/Phys
+---------------------------------------------------
+bunny   0.0375  0.0373  0.2218   0.1690    0.1683  
+duck    0.0583  0.0605  0.2459   0.2372    0.2461  
+cow     0.0730  0.0731  0.2681   0.2723    0.2727  
+teapot  0.0555  0.0550  0.2489   0.2232    0.2211  
+Saved: /home/gabri/research/eccv-chamfer/src/results/table2_shape_generalization.csv
+
+=== Table 3: Physics-only vs. Ours (Sphere source) ===
+target  method   s->t    t->s    two_sided  hausdorff  f1    
+-------------------------------------------------------------
+bunny   Physics  0.1668  0.1462  0.2218     0.4852     0.8475
+bunny   Ours     0.1636  0.1438  0.2178     0.4680     0.8644
+duck    Physics  0.1867  0.1600  0.2459     0.4826     0.7633
+duck    Ours     0.1794  0.1647  0.2435     0.4990     0.7801
+cow     Physics  0.2276  0.1418  0.2681     0.6839     0.7376
+cow     Ours     0.2283  0.1417  0.2687     0.6768     0.7380
+teapot  Physics  0.1910  0.1595  0.2489     0.5858     0.7806
+teapot  Ours     0.1814  0.1576  0.2403     0.7121     0.7922
+Saved: /home/gabri/research/eccv-chamfer/src/results/table3_coupled_results.csv
+
+=== Table 4: 20 directed pairs, two-sided CD ===
+source  target  physics  ours    phys/ours  ours_wins
+-----------------------------------------------------
+sphere  bunny   0.2218   0.2178  1.0184     True     
+sphere  duck    0.2459   0.2435  1.0099     True     
+sphere  cow     0.2681   0.2687  0.9979     False    
+sphere  teapot  0.2489   0.2403  1.0354     True     
+bunny   sphere  0.3040   0.3029  1.0038     True     
+bunny   duck    0.2384   0.2370  1.0060     True     
+bunny   cow     0.2431   0.2377  1.0226     True     
+bunny   teapot  0.2242   0.2212  1.0136     True     
+duck    sphere  0.3110   0.3115  0.9982     False    
+duck    bunny   0.2211   0.2137  1.0342     True     
+duck    cow     0.2183   0.2509  0.8699     False    
+duck    teapot  0.2254   0.2147  1.0498     True     
+cow     sphere  0.5716   0.5489  1.0412     True     
+cow     bunny   0.2781   0.2616  1.0633     True     
+cow     duck    0.3063   0.3070  0.9975     False    
+cow     teapot  0.3003   0.2995  1.0027     True     
+teapot  sphere  0.3115   0.3100  1.0048     True     
+teapot  bunny   0.2123   0.2094  1.0138     True     
+teapot  duck    0.2416   0.2376  1.0168     True     
+teapot  cow     0.2150   0.2140  1.0046     True     
+Ours better on 16/20 pairs
+Saved: /home/gabri/research/eccv-chamfer/src/results/table4_pairwise.csv
+
+=== Table 5: Sphere -> Dragon ===
+method                   s->t    t->s    two_sided  hausdorff  f1      seconds
+------------------------------------------------------------------------------
+DCO                      0.0125  0.0747  0.0758     0.2785     0.9967  6.6400 
+DCD                      0.0145  0.0786  0.0800     0.2693     0.9970  37.0200
+Physics-only             0.3490  0.1782  0.3919     0.8286     0.4861  19.1400
+Ours (base N)            0.3407  0.1774  0.3841     0.7940     0.4869  25.2500
+Ours (4/3)^3 x N = 1896  0.3264  0.1360  0.3536     0.8427     0.5739  43.5200
+(paper-scale ppc counts: 3ppc=7925, 4ppc=18785)
+Saved: /home/gabri/research/eccv-chamfer/src/results/table5_dragon.csv
+
+All done in 1583s

@@ -1,0 +1,295 @@
+warning: Git tree '/home/gabri/research/eccv-chamfer' is dirty
+[     0.1s] === config 800 / 8f / grid16 ===
+[     3.5s] frame 1/8 cd=0.3898
+[     5.2s] frame 2/8 cd=0.3104
+[     7.0s] frame 3/8 cd=0.2888
+[     8.8s] frame 4/8 cd=0.2854
+[    10.5s] frame 5/8 cd=0.2848
+[    12.5s] frame 6/8 cd=0.2843
+[    14.1s] frame 7/8 cd=0.2840
+[    16.0s] frame 8/8 cd=0.2837
+[    16.0s]   calib step=0.3: physics CD=0.0709 (normalized)
+[    17.7s] frame 1/8 cd=0.2672
+[    19.4s] frame 2/8 cd=0.2158
+[    21.2s] frame 3/8 cd=0.2194
+[    22.9s] frame 4/8 cd=0.2217
+[    24.5s] frame 5/8 cd=0.2215
+[    26.2s] frame 6/8 cd=0.2215
+[    27.9s] frame 7/8 cd=0.2216
+[    29.6s] frame 8/8 cd=0.2218
+[    29.6s]   calib step=0.6: physics CD=0.0555 (normalized)
+[    31.3s] frame 1/8 cd=0.2106
+[    33.5s] frame 2/8 cd=0.2356
+[    35.8s] frame 3/8 cd=0.2400
+[    38.2s] frame 4/8 cd=0.2386
+[    40.4s] frame 5/8 cd=0.2361
+[    42.6s] frame 6/8 cd=0.2388
+[    44.8s] frame 7/8 cd=0.2324
+[    46.9s] frame 8/8 cd=0.2401
+[    46.9s]   calib step=1.2: physics CD=0.0600 (normalized)
+[    48.6s] frame 1/8 cd=0.2672
+[    50.3s] frame 2/8 cd=0.2158
+[    52.8s] frame 3/8 cd=0.2192
+[    55.3s] frame 4/8 cd=0.2212
+[    57.7s] frame 5/8 cd=0.2205
+[    60.4s] frame 6/8 cd=0.2188
+[    62.8s] frame 7/8 cd=0.2181
+[    65.3s] frame 8/8 cd=0.2178
+[    65.8s] DCO step 30/1200 fwd=0.6434 rev=0.6163 cd=0.8909
+[    65.9s] DCO step 60/1200 fwd=0.5575 rev=0.5158 cd=0.7595
+[    66.0s] DCO step 90/1200 fwd=0.4853 rev=0.4137 cd=0.6377
+[    66.0s] DCO step 120/1200 fwd=0.4245 rev=0.3185 cd=0.5307
+[    66.1s] DCO step 150/1200 fwd=0.3727 rev=0.2466 cd=0.4469
+[    66.1s] DCO step 180/1200 fwd=0.3279 rev=0.2002 cd=0.3842
+[    66.2s] DCO step 210/1200 fwd=0.2885 rev=0.1690 cd=0.3344
+[    66.2s] DCO step 240/1200 fwd=0.2542 rev=0.1482 cd=0.2942
+[    66.3s] DCO step 270/1200 fwd=0.2240 rev=0.1343 cd=0.2612
+[    66.3s] DCO step 300/1200 fwd=0.1975 rev=0.1231 cd=0.2327
+[    66.3s] DCO step 330/1200 fwd=0.1740 rev=0.1124 cd=0.2072
+[    66.3s] DCO step 360/1200 fwd=0.1536 rev=0.1030 cd=0.1850
+[    66.4s] DCO step 390/1200 fwd=0.1358 rev=0.0944 cd=0.1654
+[    66.5s] DCO step 420/1200 fwd=0.1204 rev=0.0883 cd=0.1493
+[    66.6s] DCO step 450/1200 fwd=0.1070 rev=0.0836 cd=0.1358
+[    66.7s] DCO step 480/1200 fwd=0.0955 rev=0.0792 cd=0.1241
+[    66.7s] DCO step 510/1200 fwd=0.0854 rev=0.0756 cd=0.1140
+[    66.8s] DCO step 540/1200 fwd=0.0768 rev=0.0737 cd=0.1064
+[    66.8s] DCO step 570/1200 fwd=0.0694 rev=0.0723 cd=0.1002
+[    66.9s] DCO step 600/1200 fwd=0.0631 rev=0.0709 cd=0.0949
+[    66.9s] DCO step 630/1200 fwd=0.0576 rev=0.0695 cd=0.0903
+[    66.9s] DCO step 660/1200 fwd=0.0528 rev=0.0684 cd=0.0864
+[    67.0s] DCO step 690/1200 fwd=0.0488 rev=0.0676 cd=0.0834
+[    67.0s] DCO step 720/1200 fwd=0.0452 rev=0.0672 cd=0.0810
+[    67.0s] DCO step 750/1200 fwd=0.0422 rev=0.0668 cd=0.0790
+[    67.1s] DCO step 780/1200 fwd=0.0394 rev=0.0665 cd=0.0773
+[    67.1s] DCO step 810/1200 fwd=0.0370 rev=0.0663 cd=0.0759
+[    67.2s] DCO step 840/1200 fwd=0.0348 rev=0.0662 cd=0.0748
+[    67.2s] DCO step 870/1200 fwd=0.0330 rev=0.0661 cd=0.0739
+[    67.2s] DCO step 900/1200 fwd=0.0315 rev=0.0660 cd=0.0732
+[    67.3s] DCO step 930/1200 fwd=0.0301 rev=0.0659 cd=0.0725
+[    67.3s] DCO step 960/1200 fwd=0.0289 rev=0.0658 cd=0.0719
+[    67.3s] DCO step 990/1200 fwd=0.0278 rev=0.0657 cd=0.0714
+[    67.4s] DCO step 1020/1200 fwd=0.0269 rev=0.0655 cd=0.0708
+[    67.5s] DCO step 1050/1200 fwd=0.0260 rev=0.0655 cd=0.0705
+[    67.6s] DCO step 1080/1200 fwd=0.0253 rev=0.0655 cd=0.0702
+[    67.6s] DCO step 1110/1200 fwd=0.0246 rev=0.0654 cd=0.0699
+[    67.7s] DCO step 1140/1200 fwd=0.0241 rev=0.0654 cd=0.0697
+[    67.7s] DCO step 1170/1200 fwd=0.0234 rev=0.0650 cd=0.0691
+[    67.7s] DCO step 1200/1200 fwd=0.0229 rev=0.0645 cd=0.0684
+
+=== Physics-only vs joint vs DCO (CD / object scale) ===
+config             step    physics  joint   DCO     phys/DCO  joint/phys  minutes
+---------------------------------------------------------------------------------
+800 / 8f / grid16  0.6000  0.0555   0.0544  0.0171  3.2404    0.9819      1.1000 
+[    67.7s] === config 3K / 12f / grid16 ===
+[    80.5s] frame 1/12 cd=0.3892
+[    85.3s] frame 2/12 cd=0.3361
+[    90.3s] frame 3/12 cd=0.3125
+[    95.0s] frame 4/12 cd=0.3016
+[    99.8s] frame 5/12 cd=0.2963
+[   104.4s] frame 6/12 cd=0.2939
+[   109.2s] frame 7/12 cd=0.2929
+[   114.0s] frame 8/12 cd=0.2924
+[   118.8s] frame 9/12 cd=0.2921
+[   123.6s] frame 10/12 cd=0.2919
+[   128.3s] frame 11/12 cd=0.2918
+[   133.1s] frame 12/12 cd=0.2917
+[   133.1s]   calib step=0.3: physics CD=0.0729 (normalized)
+[   138.1s] frame 1/12 cd=0.3017
+[   143.0s] frame 2/12 cd=0.2328
+[   147.8s] frame 3/12 cd=0.2173
+[   152.5s] frame 4/12 cd=0.2157
+[   157.4s] frame 5/12 cd=0.2156
+[   162.6s] frame 6/12 cd=0.2152
+[   167.4s] frame 7/12 cd=0.2150
+[   172.4s] frame 8/12 cd=0.2148
+[   177.3s] frame 9/12 cd=0.2146
+[   182.2s] frame 10/12 cd=0.2145
+[   187.2s] frame 11/12 cd=0.2144
+[   191.9s] frame 12/12 cd=0.2143
+[   191.9s]   calib step=0.6: physics CD=0.0536 (normalized)
+[   197.0s] frame 1/12 cd=0.1828
+[   202.1s] frame 2/12 cd=0.1421
+[   207.4s] frame 3/12 cd=0.1468
+[   212.5s] frame 4/12 cd=0.1485
+[   217.9s] frame 5/12 cd=0.1481
+[   223.2s] frame 6/12 cd=0.1480
+[   228.9s] frame 7/12 cd=0.1480
+[   234.3s] frame 8/12 cd=0.1479
+[   239.8s] frame 9/12 cd=0.1478
+[   245.1s] frame 10/12 cd=0.1478
+[   250.7s] frame 11/12 cd=0.1477
+[   256.1s] frame 12/12 cd=0.1476
+[   256.1s]   calib step=1.2: physics CD=0.0369 (normalized)
+[   261.3s] frame 1/12 cd=0.1828
+[   266.3s] frame 2/12 cd=0.1421
+[   271.5s] frame 3/12 cd=0.1468
+[   278.8s] frame 4/12 cd=0.1485
+[   286.1s] frame 5/12 cd=0.1481
+[   293.3s] frame 6/12 cd=0.1479
+[   300.6s] frame 7/12 cd=0.1478
+[   307.7s] frame 8/12 cd=0.1473
+[   315.2s] frame 9/12 cd=0.1472
+[   322.4s] frame 10/12 cd=0.1471
+[   329.6s] frame 11/12 cd=0.1470
+[   337.2s] frame 12/12 cd=0.1469
+[   337.6s] DCO step 30/1200 fwd=0.6301 rev=0.5953 cd=0.8669
+[   337.9s] DCO step 60/1200 fwd=0.5489 rev=0.4787 cd=0.7283
+[   338.2s] DCO step 90/1200 fwd=0.4820 rev=0.3590 cd=0.6010
+[   338.5s] DCO step 120/1200 fwd=0.4244 rev=0.2653 cd=0.5005
+[   338.7s] DCO step 150/1200 fwd=0.3734 rev=0.2023 cd=0.4247
+[   338.9s] DCO step 180/1200 fwd=0.3279 rev=0.1640 cd=0.3666
+[   339.1s] DCO step 210/1200 fwd=0.2876 rev=0.1384 cd=0.3192
+[   339.2s] DCO step 240/1200 fwd=0.2518 rev=0.1185 cd=0.2783
+[   339.4s] DCO step 270/1200 fwd=0.2204 rev=0.1045 cd=0.2440
+[   339.6s] DCO step 300/1200 fwd=0.1930 rev=0.0926 cd=0.2141
+[   339.7s] DCO step 330/1200 fwd=0.1691 rev=0.0801 cd=0.1872
+[   339.9s] DCO step 360/1200 fwd=0.1486 rev=0.0710 cd=0.1647
+[   340.0s] DCO step 390/1200 fwd=0.1310 rev=0.0650 cd=0.1463
+[   340.2s] DCO step 420/1200 fwd=0.1158 rev=0.0599 cd=0.1304
+[   340.3s] DCO step 450/1200 fwd=0.1027 rev=0.0559 cd=0.1170
+[   340.4s] DCO step 480/1200 fwd=0.0915 rev=0.0524 cd=0.1054
+[   340.6s] DCO step 510/1200 fwd=0.0817 rev=0.0495 cd=0.0956
+[   340.7s] DCO step 540/1200 fwd=0.0734 rev=0.0477 cd=0.0875
+[   340.8s] DCO step 570/1200 fwd=0.0662 rev=0.0460 cd=0.0806
+[   341.0s] DCO step 600/1200 fwd=0.0600 rev=0.0443 cd=0.0746
+[   341.1s] DCO step 630/1200 fwd=0.0545 rev=0.0424 cd=0.0691
+[   341.2s] DCO step 660/1200 fwd=0.0498 rev=0.0412 cd=0.0647
+[   341.3s] DCO step 690/1200 fwd=0.0457 rev=0.0404 cd=0.0610
+[   341.4s] DCO step 720/1200 fwd=0.0421 rev=0.0398 cd=0.0580
+[   341.6s] DCO step 750/1200 fwd=0.0389 rev=0.0393 cd=0.0554
+[   341.7s] DCO step 780/1200 fwd=0.0361 rev=0.0389 cd=0.0531
+[   341.8s] DCO step 810/1200 fwd=0.0336 rev=0.0385 cd=0.0511
+[   342.0s] DCO step 840/1200 fwd=0.0314 rev=0.0381 cd=0.0494
+[   342.1s] DCO step 870/1200 fwd=0.0294 rev=0.0379 cd=0.0480
+[   342.2s] DCO step 900/1200 fwd=0.0276 rev=0.0378 cd=0.0468
+[   342.3s] DCO step 930/1200 fwd=0.0259 rev=0.0377 cd=0.0457
+[   342.4s] DCO step 960/1200 fwd=0.0245 rev=0.0376 cd=0.0449
+[   342.6s] DCO step 990/1200 fwd=0.0232 rev=0.0375 cd=0.0441
+[   342.8s] DCO step 1020/1200 fwd=0.0220 rev=0.0375 cd=0.0434
+[   342.9s] DCO step 1050/1200 fwd=0.0209 rev=0.0374 cd=0.0428
+[   343.0s] DCO step 1080/1200 fwd=0.0199 rev=0.0373 cd=0.0423
+[   343.1s] DCO step 1110/1200 fwd=0.0190 rev=0.0373 cd=0.0418
+[   343.3s] DCO step 1140/1200 fwd=0.0181 rev=0.0372 cd=0.0414
+[   343.4s] DCO step 1170/1200 fwd=0.0174 rev=0.0371 cd=0.0410
+[   343.5s] DCO step 1200/1200 fwd=0.0167 rev=0.0371 cd=0.0407
+
+=== Physics-only vs joint vs DCO (CD / object scale) ===
+config             step    physics  joint   DCO     phys/DCO  joint/phys  minutes
+---------------------------------------------------------------------------------
+800 / 8f / grid16  0.6000  0.0555   0.0544  0.0171  3.2404    0.9819      1.1000 
+3K / 12f / grid16  1.2000  0.0369   0.0367  0.0102  3.6305    0.9947      4.5000 
+[   343.5s] === config 8K / 16f / grid24 ===
+[   377.4s] frame 1/16 cd=0.8502
+[   391.1s] frame 2/16 cd=0.7760
+[   404.7s] frame 3/16 cd=0.7176
+[   418.1s] frame 4/16 cd=0.6715
+[   431.7s] frame 5/16 cd=0.6349
+[   445.9s] frame 6/16 cd=0.6055
+[   459.8s] frame 7/16 cd=0.5815
+[   473.2s] frame 8/16 cd=0.5619
+[   486.7s] frame 9/16 cd=0.5457
+[   500.2s] frame 10/16 cd=0.5319
+[   513.7s] frame 11/16 cd=0.5203
+[   527.3s] frame 12/16 cd=0.5103
+[   540.7s] frame 13/16 cd=0.5017
+[   554.1s] frame 14/16 cd=0.4942
+[   568.1s] frame 15/16 cd=0.4877
+[   582.4s] frame 16/16 cd=0.4819
+[   582.4s]   calib step=0.3: physics CD=0.0602 (normalized)
+[   596.4s] frame 1/16 cd=0.7651
+[   610.3s] frame 2/16 cd=0.6256
+[   624.1s] frame 3/16 cd=0.5233
+[   637.6s] frame 4/16 cd=0.4497
+[   651.2s] frame 5/16 cd=0.3970
+[   664.6s] frame 6/16 cd=0.3594
+[   678.1s] frame 7/16 cd=0.3326
+[   691.4s] frame 8/16 cd=0.3139
+[   705.3s] frame 9/16 cd=0.3002
+[   719.8s] frame 10/16 cd=0.2901
+[   734.1s] frame 11/16 cd=0.2830
+[   747.5s] frame 12/16 cd=0.2782
+[   761.1s] frame 13/16 cd=0.2750
+[   774.6s] frame 14/16 cd=0.2727
+[   788.9s] frame 15/16 cd=0.2711
+[   803.1s] frame 16/16 cd=0.2699
+[   803.1s]   calib step=0.6: physics CD=0.0337 (normalized)
+[   817.5s] frame 1/16 cd=0.6047
+[   831.0s] frame 2/16 cd=0.3713
+[   844.6s] frame 3/16 cd=0.2519
+[   858.0s] frame 4/16 cd=0.2059
+[   871.7s] frame 5/16 cd=0.1945
+[   885.2s] frame 6/16 cd=0.1919
+[   898.8s] frame 7/16 cd=0.1914
+[   916.0s] frame 8/16 cd=0.1955
+[   929.7s] frame 9/16 cd=0.1918
+[   944.2s] frame 10/16 cd=0.1911
+[   962.4s] frame 11/16 cd=0.1950
+[   976.5s] frame 12/16 cd=0.1915
+[   990.0s] frame 13/16 cd=0.1908
+[  1006.8s] frame 14/16 cd=0.1946
+[  1020.3s] frame 15/16 cd=0.1913
+[  1034.6s] frame 16/16 cd=0.1906
+[  1034.6s]   calib step=1.2: physics CD=0.0238 (normalized)
+[  1048.1s] frame 1/16 cd=0.6047
+[  1062.4s] frame 2/16 cd=0.3713
+[  1076.6s] frame 3/16 cd=0.2519
+[  1097.5s] frame 4/16 cd=0.2059
+[  1117.3s] frame 5/16 cd=0.1945
+[  1137.0s] frame 6/16 cd=0.1919
+[  1156.5s] frame 7/16 cd=0.1914
+[  1181.4s] frame 8/16 cd=0.1954
+[  1202.3s] frame 9/16 cd=0.1918
+[  1223.2s] frame 10/16 cd=0.1911
+[  1248.1s] frame 11/16 cd=0.1948
+[  1267.9s] frame 12/16 cd=0.1914
+[  1287.8s] frame 13/16 cd=0.1907
+[  1313.7s] frame 14/16 cd=0.1944
+[  1333.9s] frame 15/16 cd=0.1911
+[  1354.7s] frame 16/16 cd=0.1905
+[  1356.3s] DCO step 30/1200 fwd=1.2609 rev=1.1873 cd=1.7319
+[  1357.5s] DCO step 60/1200 fwd=1.1043 rev=0.9411 cd=1.4509
+[  1358.4s] DCO step 90/1200 fwd=0.9718 rev=0.6892 cd=1.1914
+[  1359.0s] DCO step 120/1200 fwd=0.8549 rev=0.4803 cd=0.9806
+[  1359.6s] DCO step 150/1200 fwd=0.7506 rev=0.3551 cd=0.8304
+[  1360.1s] DCO step 180/1200 fwd=0.6580 rev=0.2907 cd=0.7193
+[  1360.6s] DCO step 210/1200 fwd=0.5759 rev=0.2515 cd=0.6285
+[  1361.1s] DCO step 240/1200 fwd=0.5037 rev=0.2165 cd=0.5483
+[  1361.5s] DCO step 270/1200 fwd=0.4408 rev=0.1853 cd=0.4782
+[  1361.9s] DCO step 300/1200 fwd=0.3864 rev=0.1565 cd=0.4169
+[  1362.3s] DCO step 330/1200 fwd=0.3398 rev=0.1352 cd=0.3657
+[  1362.7s] DCO step 360/1200 fwd=0.2999 rev=0.1176 cd=0.3221
+[  1363.1s] DCO step 390/1200 fwd=0.2659 rev=0.1036 cd=0.2854
+[  1363.5s] DCO step 420/1200 fwd=0.2370 rev=0.0920 cd=0.2542
+[  1363.8s] DCO step 450/1200 fwd=0.2124 rev=0.0833 cd=0.2281
+[  1364.1s] DCO step 480/1200 fwd=0.1914 rev=0.0766 cd=0.2061
+[  1364.4s] DCO step 510/1200 fwd=0.1735 rev=0.0725 cd=0.1880
+[  1364.8s] DCO step 540/1200 fwd=0.1582 rev=0.0689 cd=0.1725
+[  1365.1s] DCO step 570/1200 fwd=0.1449 rev=0.0655 cd=0.1590
+[  1365.4s] DCO step 600/1200 fwd=0.1335 rev=0.0626 cd=0.1475
+[  1365.8s] DCO step 630/1200 fwd=0.1236 rev=0.0605 cd=0.1376
+[  1366.1s] DCO step 660/1200 fwd=0.1149 rev=0.0579 cd=0.1287
+[  1366.5s] DCO step 690/1200 fwd=0.1073 rev=0.0563 cd=0.1212
+[  1366.8s] DCO step 720/1200 fwd=0.1005 rev=0.0553 cd=0.1147
+[  1367.1s] DCO step 750/1200 fwd=0.0945 rev=0.0546 cd=0.1091
+[  1367.4s] DCO step 780/1200 fwd=0.0891 rev=0.0540 cd=0.1041
+[  1367.7s] DCO step 810/1200 fwd=0.0842 rev=0.0536 cd=0.0998
+[  1368.0s] DCO step 840/1200 fwd=0.0797 rev=0.0532 cd=0.0958
+[  1368.3s] DCO step 870/1200 fwd=0.0757 rev=0.0528 cd=0.0923
+[  1368.7s] DCO step 900/1200 fwd=0.0719 rev=0.0524 cd=0.0890
+[  1369.0s] DCO step 930/1200 fwd=0.0685 rev=0.0521 cd=0.0861
+[  1369.3s] DCO step 960/1200 fwd=0.0654 rev=0.0519 cd=0.0835
+[  1369.6s] DCO step 990/1200 fwd=0.0625 rev=0.0517 cd=0.0811
+[  1369.9s] DCO step 1020/1200 fwd=0.0598 rev=0.0516 cd=0.0790
+[  1370.2s] DCO step 1050/1200 fwd=0.0573 rev=0.0515 cd=0.0770
+[  1370.5s] DCO step 1080/1200 fwd=0.0549 rev=0.0514 cd=0.0752
+[  1370.9s] DCO step 1110/1200 fwd=0.0527 rev=0.0514 cd=0.0736
+[  1371.2s] DCO step 1140/1200 fwd=0.0506 rev=0.0513 cd=0.0720
+[  1371.5s] DCO step 1170/1200 fwd=0.0487 rev=0.0512 cd=0.0706
+[  1371.8s] DCO step 1200/1200 fwd=0.0468 rev=0.0511 cd=0.0693
+
+=== Physics-only vs joint vs DCO (CD / object scale) ===
+config             step    physics  joint   DCO     phys/DCO  joint/phys  minutes
+---------------------------------------------------------------------------------
+800 / 8f / grid16  0.6000  0.0555   0.0544  0.0171  3.2404    0.9819      1.1000 
+3K / 12f / grid16  1.2000  0.0369   0.0367  0.0102  3.6305    0.9947      4.5000 
+8K / 16f / grid24  1.2000  0.0238   0.0238  0.0087  2.7490    0.9993      16.8000
