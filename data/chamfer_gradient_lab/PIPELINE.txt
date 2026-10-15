@@ -12,8 +12,10 @@ has passed all adoption gates. The default optimizer remains Chamfer + Adam.
 The latest study replays six development pairs at nine states per pair, giving
 54 correlated states, not 54 independent scenes. It compares geometric and FPFH
 transport fields, parameter gradient descent, ridge lifting, and actual Adam.
-The separate, time-matched Adam continuation experiment is still pending. One
-Adam step is not evidence that Adam cannot discover a direction with more time.
+The time-matched continuation audit is complete: all 54 starts still improve
+under Adam continuation. No OT-ridge candidate beats the best within-budget Adam
+Chamfer value in this audit. Some candidates improve GT error more than Adam,
+but that does not establish overall superiority or pass the existing gates.
 
 Architecture
 ------------
@@ -91,7 +93,9 @@ It does not solve a mass-weighted barycentric displacement fit. Gamma is 0.01
 times an eight-step power estimate of the largest eigenvalue of J J^T. The
 matrix-free conjugate-gradient solver reports its actual residual. Raw residual,
 direction agreement, damping shrinkage, and post-normalization residual are
-different quantities; the proposed dedicated transfer-error audit is pending.
+different quantities. The dedicated audit records each separately. Its ridge
+force-fit median residuals remain about 0.97-0.99 even after positive rescaling;
+this is not, by itself, proof of an unrepresentable target direction.
 
 For a frozen plan, displacement d=Z_trial-Z has surrogate change
 
@@ -110,7 +114,10 @@ Evaluation and attribution
 Observed target Y is an input to matching and optimization. GT is the separately
 known position of each source point after the true deformation. The 4DMatch
 loader reconstructs it from flow, rotation, and translation; the prepared HF
-3DMatch loader reads its stored truth and normalization scale. GT is used only
+3DMatch experiment uses real fragments with a controlled 30-degree source
+rotation and a translation of 0.1 source radius. Its stored truth is the original
+source fragment before this perturbation, not official pose-benchmark ground
+truth. The loader applies the stored normalization scale. GT is used only
 for evaluation, risk derivatives, and offline development gates. It is absent
 from transport, ridge lifting, and the step controller. Development choices have
 used these evaluations, so these pairs are not an untouched test set.
@@ -126,6 +133,31 @@ new native training trajectories and independent scenes. Current feature
 candidates do not qualify. Neither conference acceptance nor general superiority
 has been established.
 
+Time-matched continuation audit
+------------------------------
+ndp_budget_probe.py clones each native model and its pre-update Adam moments.
+Recomputed first updates must exactly match the original native update. Each
+proposal pays for its Adam speed calibration, model/Jacobian setup, matching,
+transfer, normalization and native finite controller. Trial parameters are
+rounded to float32 and evaluated in the native model. GT diagnostics and record
+writing are excluded from both computation budgets.
+
+Two Adam timing repetitions continue the same active level, inputs and optimizer
+history. This is a local continuation, not the original later-level schedule.
+The main comparison gives Adam its lowest observed CD through the first evaluated
+state after the time deadline. A sensitivity check uses only evaluations strictly
+within the budget. Neither selection uses GT. The study recorded 1,080 native
+trials and 5,432 Adam evaluation states. Budgets were 0.040-0.442 seconds on the
+measured device; Adam reached 5-68 updates at the first post-budget evaluation.
+These timings are not universal hardware-independent compute claims.
+
+No plateau was observed at relative-gain thresholds 1e-6, 1e-4 or 1e-3. The
+smallest strictly within-budget Adam CD gain across comparisons was 0.001231.
+No OT-ridge method beat its matched Adam comparator in both repetitions, with
+either controller. At a differentiable state, an exactly zero parameter gradient
+also rules out negative first derivatives in every parameter direction; finite
+assignment-boundary crossings and algorithmic stagnation are distinct questions.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -137,11 +169,13 @@ pipeline/capacity.py    Marginal transport models and frozen-plan surrogate.
 pipeline/features.py    Observed FPFH matching penalty.
 pipeline/lifting.py     Jacobian products, conjugate gradients, ridge lifting.
 pipeline/trust.py       Observable finite-step acceptance.
+pipeline/continuation.py Native Adam cloning, timed paths, and transfer residuals.
 pipeline/controlled.py  Earlier native controller experiments.
 pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
 ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
 capacity_report.py     Numerical checks and frozen capacity adoption gates.
 feature_report.py      Feature/geometric attribution and plots.
+budget_report.py       Time-bracketed Adam comparison and transfer diagnostics.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -193,6 +227,8 @@ With those assets and an idle allocated CUDA GPU:
   python capacity_report.py
   python ndp_feature_probe.py
   python feature_report.py
+  python ndp_budget_probe.py
+  python budget_report.py
 
 The feature report requires the preceding capacity controls. Existing reference
 results may be supplied instead of regenerating baselines. Reports consume local
