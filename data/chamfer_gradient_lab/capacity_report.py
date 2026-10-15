@@ -17,13 +17,13 @@ METHODS=tuple(k+'_'+m for k in KINDS for m in ('gd','lift'))
 BASES=('actual_adam','parameter_gd')
 
 
-def verify_coverage(dr,fr,sr,solvers,integrity,kinds=KINDS,methods=METHODS):
+def verify_coverage(dr,fr,sr,solvers,integrity,kinds=KINDS,methods=METHODS,solver_methods=None):
     pairs=(100,101,124,125,200,201)
     keys={(p,l,t) for p in pairs for l in (0,4,8) for t in (0,25,49)}
     expected=[{(k,m) for k in keys for m in BASES+methods},
               {(k,m,p,c) for k in keys for m in BASES+methods for p in ('raw','trust','cd_trust') for c in (1/16,.25,1.)},
               {(k,m) for k in keys for m in kinds},
-              {(k,m+'_lift') for k in keys for m in kinds}]
+              {(k,m) for k in keys for m in (solver_methods if solver_methods is not None else tuple(v+'_lift' for v in kinds))}]
     for name,rows,want in zip(('directions','finite','states','solver'),(dr,fr,sr,solvers),expected):
         labels=[(key(r),r['method'],r['policy'],r['cap']) if name=='finite' else (key(r),r['method']) for r in rows]
         assert len(labels)==len(want) and set(labels)==want, 'Incomplete or duplicated '+name+' records'

@@ -16,6 +16,9 @@ The time-matched continuation audit is complete: all 54 starts still improve
 under Adam continuation. No OT-ridge candidate beats the best within-budget Adam
 Chamfer value in this audit. Some candidates improve GT error more than Adam,
 but that does not establish overall superiority or pass the existing gates.
+The subsequent mass-weighted displacement study also passes its numerical checks
+but fails adoption. Better alignment to a proposed displacement is insufficient
+to establish better registration. It reuses the same development states.
 
 Architecture
 ------------
@@ -39,6 +42,9 @@ NDP baseline: 9 deformation levels x 50 Adam updates
                   |
                   +--> ridge: (J J^T + gamma I) a = f
                               delta_theta = J^T a
+                  |
+                  +--> weighted: (J^T R J + gamma I) delta_theta = J^T f
+                                 R = diag(P 1), matrix-free solve
                   |
                   v
           normalize predicted output speed to the actual Adam update
@@ -84,7 +90,7 @@ each trial. This is not differentiation through the feature extractor and is
 not a full implementation of RobOT.
 
 Distinguish row mass r_i=(P1)_i, barycentric displacement
-v_i=(P Y)_i/r_i-z_i when r_i>0, and force f_i=r_i*v_i. The current ridge solve
+v_i=(P Y)_i/r_i-z_i when r_i>0, and force f_i=r_i*v_i. The force-ridge control
 fits FORCE with unweighted regularized least squares:
 
   min_delta 0.5*||J delta - f||^2 + 0.5*gamma*||delta||^2.
@@ -96,6 +102,23 @@ direction agreement, damping shrinkage, and post-normalization residual are
 different quantities. The dedicated audit records each separately. Its ridge
 force-fit median residuals remain about 0.97-0.99 even after positive rescaling;
 this is not, by itself, proof of an unrepresentable target direction.
+
+The weighted control instead solves
+  min_delta 0.5*||sqrt(R)*(J delta - v)||^2 + 0.5*gamma*||delta||^2.
+It reuses the same solver with weighted Jacobian sqrt(R)*J and target
+f/sqrt(r), setting the target to zero at zero-mass rows. Its damping uses the
+same recipe on the weighted kernel. This is standard weighted least squares,
+not a new optimizer. Correspondence-weighted displacement fitting is already
+present in RobOT, NeurIPS 2021, Eq. (8): https://arxiv.org/abs/2111.00648 .
+Transport row masses are not assumed to be calibrated correspondence confidence.
+
+For a nonzero exact weighted solution, the frozen surrogate's initial slope is
+  -f^T J delta = -||sqrt(R)*J delta||^2 - gamma*||delta||^2 < 0.
+This proves surrogate descent, not uniform GT-risk descent. Even an ideal target
+v=-e can hurt uniform risk: for scalar parameter J=(1,2)^T, e=(3,-1)^T,
+R=diag(0.01,1), delta=1.97/(4.01+gamma)>0, the uniform MSE derivative equals
+delta>0. Tests cover this counterexample, the dense normal-equation solution,
+uniform-mass direction equivalence, and global mass-scaling invariance.
 
 For a frozen plan, displacement d=Z_trial-Z has surrogate change
 
@@ -158,6 +181,23 @@ either controller. At a differentiable state, an exactly zero parameter gradient
 also rules out negative first derivatives in every parameter direction; finite
 assignment-boundary crossings and algorithmic stagnation are distinct questions.
 
+The current speed normalization has an explicit limitation: if the actual Adam
+output speed is zero, every scaled proposal is also zero. Thus this pipeline
+cannot presently claim escape from exact Adam stagnation. A useful raw direction
+and a nonzero accepted normalized update are different requirements.
+
+Weighted displacement control
+-----------------------------
+ndp_weighted_probe.py keeps the same matching fields, sampled states, speed scale,
+step caps, controllers, and adoption gates. Each field compares GD, force ridge,
+and mass-weighted fitting. All six baseline endpoints/traces replay exactly;
+old control and force-transfer measurements match the preceding audits exactly.
+The report checks 756 directions, 6,804 finite trials, 432 ridge solves, and
+648 transfer measurements. Weighted fitting lowers the median weighted ray error
+in all eight field/family groups, but every candidate still fails the original
+adoption gates. No weighted candidate has proceeded to a native training run or
+new scene. Its time-matched Adam comparison is therefore not yet performed.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -176,6 +216,7 @@ ndp_*_probe.py          Clone-state experiments; refuse existing run directories
 capacity_report.py     Numerical checks and frozen capacity adoption gates.
 feature_report.py      Feature/geometric attribution and plots.
 budget_report.py       Time-bracketed Adam comparison and transfer diagnostics.
+weighted_report.py     Weighted fit attribution and unchanged adoption gates.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -229,8 +270,11 @@ With those assets and an idle allocated CUDA GPU:
   python feature_report.py
   python ndp_budget_probe.py
   python budget_report.py
+  python ndp_weighted_probe.py
+  python weighted_report.py
 
-The feature report requires the preceding capacity controls. Existing reference
+The feature report requires the preceding capacity controls; the weighted report
+also checks the preceding feature and budget controls. Existing reference
 results may be supplied instead of regenerating baselines. Reports consume local
 TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
 Each pre-fit storage check requires the lab below 800 MB, with a total working

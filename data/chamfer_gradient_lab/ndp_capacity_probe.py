@@ -8,7 +8,8 @@ from functools import partial
 from pipeline.model import ROOT,np,torch,config
 from pipeline.datasets import transfer
 from pipeline.runner import fit
-from pipeline.lifting import jacobian_products,ridge_lift
+from pipeline.lifting import jacobian_products,ridge_lift,weighted_lift
+from pipeline.continuation import transfer_error
 from pipeline.capacity import plan_field,frozen_change
 from pipeline.trust import select_step
 from pipeline.controlled import cd
@@ -27,7 +28,7 @@ def build_fields(p,q,key):
         yield name,force,mass,info,time.perf_counter()-start
 
 
-def observe(before,after,inputs,q,gt,history,group,scale,dirs,key,records,field_builder=None,out=None):
+def observe(before,after,inputs,q,gt,history,group,scale,dirs,key,records,field_builder=None,out=None,weighted=False):
     before._forward_pre_hooks.clear();before=before.double()
     inputs,q,gt=inputs.double(),q.double(),gt.double()
     params=list(before.parameters());saved=[p.detach().clone() for p in params]
@@ -49,12 +50,23 @@ def observe(before,after,inputs,q,gt,history,group,scale,dirs,key,records,field_
             (destination/'numerical_failure.json').write_text(json.dumps(progress,indent=2)+'\n')
             raise RuntimeError('Transport numerical gate failed; no approximate envelope direction adopted')
         fields.append((name,force,info,seconds))
-        proposals.append((name+'_gd',transpose(force),force,mass))
-        torch.cuda.synchronize();start=time.perf_counter()
-        delta,solver=ridge_lift(forward,transpose,-force,81000+key[0]*100+key[1]*10+key[2])
-        torch.cuda.synchronize();elapsed=time.perf_counter()-start
-        proposals.append((name+'_lift',delta,force,mass))
-        records['solver'].append([*key,name+'_lift',solver['converged'],solver['relative_residual'],solver['iterations'],elapsed])
+        gd=transpose(force);proposals.append((name+'_gd',gd,force,mass))
+        measured=[('gd',gd,0.)]
+        seed=81000+key[0]*100+key[1]*10+key[2]
+        for kind in (('lift','weighted') if weighted else ('lift',)):
+            torch.cuda.synchronize();start=time.perf_counter()
+            delta,solver=(weighted_lift(forward,transpose,force,mass,seed) if kind=='weighted'
+                          else ridge_lift(forward,transpose,-force,seed))
+            torch.cuda.synchronize();elapsed=time.perf_counter()-start
+            if not solver['converged']:raise RuntimeError(f'Unconverged {name}_{kind}: {solver}')
+            proposals.append((name+'_'+kind,delta,force,mass));measured.append((kind,delta,solver['damping']))
+            records['solver'].append([*key,name+'_'+kind,solver['converged'],solver['relative_residual'],solver['iterations'],elapsed])
+        if weighted:
+            root=mass.sqrt()[:,None];target=force/root.clamp_min(torch.finfo(force.dtype).tiny)
+            for kind,delta,damping in measured:
+                velocity=forward(delta);force_fit=transfer_error(force,velocity)
+                bary_fit=transfer_error(target,root*velocity)
+                records['transfer'].append([*key,name+'_'+kind,force_fit['ray_error'],bary_fit['ray_error'],bary_fit['relative_error'],damping])
     trial=copy.deepcopy(before);live=list(trial.parameters());identity_error=0.
     for method,raw,force,mass in proposals:
         delta=normalize(raw);velocity=forward(delta)
@@ -89,7 +101,7 @@ def observe(before,after,inputs,q,gt,history,group,scale,dirs,key,records,field_
             identity_error,torch.cuda.max_memory_allocated(),info['scaling_residual'],info['newton_iterations']])
 
 
-def run(out,field_builder=None):
+def run(out,field_builder=None,weighted=False):
     out.mkdir(exist_ok=True)
     folder=out/'probe';folder.mkdir(exist_ok=False)
     cfg=config();cfg.budget=[50]*9;torch.set_num_threads(1);torch.backends.cuda.matmul.allow_tf32=False
@@ -99,11 +111,14 @@ def run(out,field_builder=None):
         'finite':'pair level step method policy cap fraction accepted risk_change objective_change cd_change output_norm linearization_error attempts',
         'states':'pair level step method task_cosine field_norm epsilon total_mass max_source_relative_mass source_relative_std target_relative_std residual iterations converged seconds mse_identity_error cuda_peak_bytes scaling_residual newton_iterations',
         'solver':'pair level step method converged relative_residual iterations seconds'}
+    if weighted:
+        records['transfer']=[]
+        headers['transfer']='pair level step method force_ray_error barycentric_ray_error weighted_relative_error damping'
     replays=[]
     for pair in (100,101,124,125,200,201):
         assert sum(p.stat().st_size for p in ROOT.rglob('*') if p.is_file())<800_000_000
         torch.cuda.reset_peak_memory_stats();x,y,truth,_=transfer(pair)
-        observer=partial(observe,field_builder=field_builder,out=out)
+        observer=partial(observe,field_builder=field_builder,out=out,weighted=weighted)
         factory=lambda:instrumented(pair,x,y,truth,None,None,records,observer=observer)
         result=fit(pair,0,'official',0,folder,loader=transfer,cfg=cfg,factory=factory)
         stem=f'p{pair}_s0_official_w0';ref=ROOT/'paper_revision'/('replication_4d' if pair<200 else 'replication_hf')
@@ -116,7 +131,8 @@ def run(out,field_builder=None):
             with (folder/(name+'.txt')).open('w',newline='') as f:
                 writer=csv.writer(f);writer.writerow(headers[name].split());writer.writerows(rows)
         (folder/'integrity.json').write_text(json.dumps(dict(exact_replays=replays,rows={k:len(v) for k,v in records.items()}),indent=2)+'\n')
-    assert {k:len(v) for k,v in records.items()}==dict(directions=540,finite=4860,states=216,solver=216)
+    expected=dict(directions=756,finite=6804,states=216,solver=432,transfer=648) if weighted else dict(directions=540,finite=4860,states=216,solver=216)
+    assert {k:len(v) for k,v in records.items()}==expected
 
 
 def main():

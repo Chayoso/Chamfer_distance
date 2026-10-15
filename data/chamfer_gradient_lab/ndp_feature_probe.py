@@ -11,12 +11,12 @@ OUT=ROOT/'paper_revision/feature_20261015'
 KINDS=('geo_soft','geo_unbalanced','feature_soft','feature_unbalanced')
 
 
-def build_fields(p,q,key):
+def build_fields(p,q,key,out=OUT):
     torch.cuda.synchronize();start=time.perf_counter()
     penalty,details=feature_penalty(p,q)
     torch.cuda.synchronize();elapsed=time.perf_counter()-start
     record=dict(pair=key[0],level=key[1],step=key[2],seconds=elapsed,open3d=o3d.__version__,**details)
-    with (OUT/'features.txt').open('a') as f:f.write(json.dumps(record)+'\n')
+    with (out/'features.txt').open('a') as f:f.write(json.dumps(record)+'\n')
     for name in KINDS:
         augmented=name.startswith('feature_');kind=name.split('_',1)[1]
         torch.cuda.synchronize();start=time.perf_counter()
