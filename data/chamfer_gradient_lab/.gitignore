@@ -1,0 +1,14 @@
+assets/
+paper_revision/
+cache/
+tmp/
+results/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.npz
+*.npy
+*.pt
+*.pth
+*.png
+*.pdf

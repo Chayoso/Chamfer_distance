@@ -1,0 +1,201 @@
+CHAMFER DIRECTION RESEARCH PIPELINE
+===================================
+
+Purpose and current status
+--------------------------
+This research asks whether global correspondence can propose useful deformation
+directions that Chamfer-based optimization does not discover, and whether a neural
+deformation model can realize those directions. The current implementation is a
+mechanism study, not an established improvement over the baseline. No candidate
+has passed all adoption gates. The default optimizer remains Chamfer + Adam.
+
+The latest study replays six development pairs at nine states per pair, giving
+54 correlated states, not 54 independent scenes. It compares geometric and FPFH
+transport fields, parameter gradient descent, ridge lifting, and actual Adam.
+The separate, time-matched Adam continuation experiment is still pending. One
+Adam step is not evidence that Adam cannot discover a direction with more time.
+
+Architecture
+------------
+Observed source X and target Y
+        |
+        v
+NDP baseline: 9 deformation levels x 50 Adam updates
+        |
+        +--> final registration --> independent GT evaluation
+        |
+        +--> clone states at levels {0,4,8}, updates {0,25,49}
+                  |
+                  v
+          global correspondence plan P
+          geometric cost / frozen FPFH feature penalty
+                  |
+                  v
+          point force f = P Y - diag(P 1) Z
+                  |
+                  +--> GD: delta_theta = J^T f
+                  |
+                  +--> ridge: (J J^T + gamma I) a = f
+                              delta_theta = J^T a
+                  |
+                  v
+          normalize predicted output speed to the actual Adam update
+                  |
+                  v
+          backtracking: objective decrease + output linearization agreement
+                  |
+                  v
+          evaluate actual output, Chamfer change, and GT risk change
+
+Z denotes the current warped source and J = dZ/dtheta for the active NDP level.
+Every diagnostic trial changes a clone. The original baseline trajectory and its
+Adam moments remain intact; recorded endpoints and traces must replay exactly.
+
+Baseline and objective
+----------------------
+The baseline uses symmetric UNSQUARED Euclidean Chamfer:
+
+  CD(Z,Y) = mean_i min_j ||z_i-y_j|| + mean_j min_i ||z_i-y_j||.
+
+The source and target are separately centered, matching the historical baseline.
+Each uses at most 2,000 sampled points. The fixed-budget loop makes 50 updates
+and an endpoint evaluation at each of nine levels. Each level has its own Adam
+optimizer (learning rate 0.01). The model uses three hidden layers of width 128,
+frequency start k0=-8, and axis-angle SE(3) motion. Baseline parameters are float32;
+cloned direction calculations use float64. The frozen reference test checks the
+loop against its pre-refactor implementation, including RNG state and losses.
+
+Proposal, transfer, and acceptance
+---------------------------------
+pipeline/capacity.py implements soft, semi-relaxed, unbalanced, and balanced
+entropic transport. Costs are half squared Euclidean distances. The geometric
+scale sets epsilon; the relaxed marginal penalty uses tau=2*epsilon. Scaling
+residuals must pass the numerical gate; balanced transport can use damped Newton
+refinement when requested with --newton.
+
+pipeline/features.py computes normalized, 33-dimensional FPFH descriptors from
+the observed current source and target. Let h be their pooled mean nearest-
+neighbor spacing. Normal estimation uses radius 2h and at most 30 neighbors;
+FPFH uses radius 5h and at most 100 neighbors. The cost adds epsilon times
+0.5*||descriptor_i-descriptor_j||^2/0.1^2. Features and epsilon are frozen for
+each trial. This is not differentiation through the feature extractor and is
+not a full implementation of RobOT.
+
+Distinguish row mass r_i=(P1)_i, barycentric displacement
+v_i=(P Y)_i/r_i-z_i when r_i>0, and force f_i=r_i*v_i. The current ridge solve
+fits FORCE with unweighted regularized least squares:
+
+  min_delta 0.5*||J delta - f||^2 + 0.5*gamma*||delta||^2.
+
+It does not solve a mass-weighted barycentric displacement fit. Gamma is 0.01
+times an eight-step power estimate of the largest eigenvalue of J J^T. The
+matrix-free conjugate-gradient solver reports its actual residual. Raw residual,
+direction agreement, damping shrinkage, and post-normalization residual are
+different quantities; the proposed dedicated transfer-error audit is pending.
+
+For a frozen plan, displacement d=Z_trial-Z has surrogate change
+
+  Q(d)-Q(0) = 0.5*sum_i r_i*||d_i||^2 - sum_i f_i dot d_i.
+
+The primary transport controller tests this surrogate. A separate common-CD
+controller tests Chamfer directly; raw finite steps are diagnostic controls.
+Backtracking requires Armijo decrease (coefficient 0.1) and relative output
+linearization error <=0.1, with up to 21 dyadic attempts and caps 1/16, 1/4, 1.
+The surrogate controller does not guarantee a decrease in Chamfer or GT error.
+The actual nonlinear output is always evaluated. This is a local frozen-plan
+argument, not a global convergence theorem for adaptive features or epsilon.
+
+Evaluation and attribution
+--------------------------
+Observed target Y is an input to matching and optimization. GT is the separately
+known position of each source point after the true deformation. The 4DMatch
+loader reconstructs it from flow, rotation, and translation; the prepared HF
+3DMatch loader reads its stored truth and normalization scale. GT is used only
+for evaluation, risk derivatives, and offline development gates. It is absent
+from transport, ridge lifting, and the step controller. Development choices have
+used these evaluations, so these pairs are not an untouched test set.
+
+Reports verify complete state/method/policy grids, solver convergence, exact
+baseline replays, and the identity
+  MSE(Z+d)-MSE(Z) = 2*<Z-GT,d>/N + ||d||^2/N.
+They compare GD and ridge on the same field to isolate transfer, and compare
+feature fields with geometric fields having the SAME marginal model. Adoption
+requires both data families to pass the frozen local and finite-step gates.
+Zero/rejected updates are not rescues. Only passing candidates may proceed to
+new native training trajectories and independent scenes. Current feature
+candidates do not qualify. Neither conference acceptance nor general superiority
+has been established.
+
+Code layout
+-----------
+pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
+pipeline/datasets.py    Prepared local data and evaluation correspondence loaders.
+pipeline/losses.py      Chamfer and historical loss controls.
+pipeline/optim.py       Fixed-budget baseline loop.
+pipeline/runner.py      Fits, independent evaluation, and text records.
+pipeline/capacity.py    Marginal transport models and frozen-plan surrogate.
+pipeline/features.py    Observed FPFH matching penalty.
+pipeline/lifting.py     Jacobian products, conjugate gradients, ridge lifting.
+pipeline/trust.py       Observable finite-step acceptance.
+pipeline/controlled.py  Earlier native controller experiments.
+pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
+ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
+capacity_report.py     Numerical checks and frozen capacity adoption gates.
+feature_report.py      Feature/geometric attribution and plots.
+tests/                 Mathematical, numerical, controller, and reporting tests.
+tests/fixtures/         Frozen source fixture, independent of result directories.
+scripts/               Pinned model retrieval and six-pair baseline generation.
+
+Small root modules preserve historical imports used by tests and experiments.
+The publication includes their dependency closure, not obsolete source backups,
+experiment outputs, datasets, checkpoints, or caches. Each source file has fewer
+than 500 lines. This document is the only newly added research documentation.
+
+Setup and execution (from this document's directory)
+----------------------------------------------------
+Use an existing compatible Python environment. Install the appropriate PyTorch
+build for your hardware, then the packages in requirements.txt. Keep temporary
+files and caches inside this lab. For example, in a Linux shell:
+
+  mkdir -p cache/matplotlib tmp paper_revision
+  export PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+  export MPLCONFIGDIR="$PWD/cache/matplotlib" TMPDIR="$PWD/tmp"
+  export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+  python scripts/fetch_ndp.py
+  python -m pytest -q
+
+The source fetcher checks SHA256 digests of upstream NDP files at commit
+63e9e2767e3db96a12bae18146971adeddcb9a4e of
+https://github.com/rabbityl/DeformationPyramid . It retains the required AST
+definitions without changing their function/class logic. Upstream code remains
+subject to its original license. The downloaded definitions are not committed.
+It also fetches the historical InfoCD and Density-aware Chamfer Distance control
+functions at the commit hashes embedded in the script, checking their SHA256
+digests. Existing matching definitions are retained; different files are never
+overwritten. On a server without Internet access, run the fetcher on a connected
+machine and copy only the resulting assets/*_official directories into this lab.
+
+Dataset-free CPU tests need these downloaded model definitions and Open3D.
+GPU/data replay tests skip when their required resources are unavailable; skips
+are not validation of full experiment reproduction. The benchmark data is not
+redistributed here. Place previously prepared files at:
+  assets/4dmatch_replication/{100,101,124,125}.npz
+  assets/hf_3dmatch/{200,201}.npz
+4DMatch arrays: s_pc, t_pc, s2t_flow, rot, trans, correspondences.
+HF arrays: source, target, truth, overlap, scale.
+Use the existing dataset permissions and the original preparation/normalization;
+an arbitrary NPZ with these field names does not reproduce the recorded study.
+
+With those assets and an idle allocated CUDA GPU:
+  export CUDA_VISIBLE_DEVICES=<allocated GPU index> CUDA_CACHE_DISABLE=1
+  python scripts/baseline.py
+  python ndp_capacity_probe.py --newton
+  python capacity_report.py
+  python ndp_feature_probe.py
+  python feature_report.py
+
+The feature report requires the preceding capacity controls. Existing reference
+results may be supplied instead of regenerating baselines. Reports consume local
+TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
+Each pre-fit storage check requires the lab below 800 MB, with a total working
+folder limit of 1 GB. Run directories are never silently reused.

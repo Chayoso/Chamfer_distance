@@ -1,0 +1,6 @@
+﻿numpy>=1.26
+torch>=2.2
+pytest>=8
+scipy>=1.11
+matplotlib>=3.8
+open3d==0.19.0
