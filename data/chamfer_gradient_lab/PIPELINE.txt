@@ -19,6 +19,8 @@ but that does not establish overall superiority or pass the existing gates.
 The subsequent mass-weighted displacement study also passes its numerical checks
 but fails adoption. Better alignment to a proposed displacement is insufficient
 to establish better registration. It reuses the same development states.
+Removing the spatial matching term also fails adoption. None of these controls
+has established an improvement suitable for replacing the baseline optimizer.
 
 Architecture
 ------------
@@ -72,6 +74,9 @@ optimizer (learning rate 0.01). The model uses three hidden layers of width 128,
 frequency start k0=-8, and axis-angle SE(3) motion. Baseline parameters are float32;
 cloned direction calculations use float64. The frozen reference test checks the
 loop against its pre-refactor implementation, including RNG state and losses.
+The original NDP configuration permits up to 500 iterations with early stopping.
+Our fixed 50-update loop is a controlled budget adaptation, not reproduction of
+the complete published benchmark or a collection of converged NDP optima.
 
 Proposal, transfer, and acceptance
 ---------------------------------
@@ -198,6 +203,29 @@ in all eight field/family groups, but every candidate still fails the original
 adoption gates. No weighted candidate has proceeded to a native training run or
 new scene. Its time-matched Adam comparison is therefore not yet performed.
 
+Feature-only correspondence control
+----------------------------------
+ndp_descriptor_probe.py compares the preceding mixed cost with feature-only
+matching. In dimensionless units, the mixed cost is C/epsilon+B; the control
+removes C/epsilon and uses B alone with entropy 1 and relaxed marginal penalty 2.
+It preserves the descriptors, transfer operators, speed scale and adoption gates.
+For frozen descriptors, feature-only OT is spatially constant: its displacement
+force comes from the separate Q fitting objective, not its spatial derivative.
+
+For soft matching, a correct feature margin G and spatial disadvantage A give
+pairwise correspondence odds exp(G-A); removing the spatial term gives exp(G).
+This conditional benefit has an opposite limit: indistinguishable descriptors
+can pull an already correct shape toward its centroid. Neither dominance nor
+correct FPFH correspondence is guaranteed. RobOT already uses feature matching
+and spatial fitting; this experiment is a mechanism control.
+
+The six exact replays again cover 756 directions and 6,804 finite trials, with
+all preceding mixed controls matching exactly. Every feature-only candidate
+fails adoption. In HF, feature-only soft matching improves point-field alignment
+from 4/18 to 7/18 states, but weighted parameter transfer loses three favorable
+directions and achieves finite GT descent in only 4/18 states. Both matching and
+transfer remain limitations. Reports split these effects by deformation level.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -217,6 +245,7 @@ capacity_report.py     Numerical checks and frozen capacity adoption gates.
 feature_report.py      Feature/geometric attribution and plots.
 budget_report.py       Time-bracketed Adam comparison and transfer diagnostics.
 weighted_report.py     Weighted fit attribution and unchanged adoption gates.
+descriptor_report.py   Spatial-cost attribution and per-level direction analysis.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -272,9 +301,12 @@ With those assets and an idle allocated CUDA GPU:
   python budget_report.py
   python ndp_weighted_probe.py
   python weighted_report.py
+  python ndp_descriptor_probe.py
+  python descriptor_report.py
 
 The feature report requires the preceding capacity controls; the weighted report
-also checks the preceding feature and budget controls. Existing reference
+also checks the preceding feature and budget controls. The descriptor report
+checks the weighted study's mixed controls. Existing reference
 results may be supplied instead of regenerating baselines. Reports consume local
 TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
 Each pre-fit storage check requires the lab below 800 MB, with a total working

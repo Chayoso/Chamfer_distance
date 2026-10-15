@@ -57,10 +57,14 @@ def transport_plan(cost,epsilon,kind,maxiter=4096,tolerance=1e-8,newton=False):
                              scaling_residual=scaling_residual,newton_iterations=newton_iterations)
 
 
-def plan_field(p,q,kind,maxiter=4096,newton=False,penalty=None):
+def plan_field(p,q,kind,maxiter=4096,newton=False,penalty=None,feature_only=False):
     p,q=p.detach(),q.detach()
-    cost=.5*torch.cdist(p,q,compute_mode='donot_use_mm_for_euclid_dist').square()
-    epsilon=float((2*cost.min(0).values.mean()/p.shape[1]).clamp_min(torch.finfo(p.dtype).eps))
+    if feature_only:
+        if penalty is None:raise ValueError('Feature-only matching requires a feature cost')
+        cost=p.new_zeros(len(p),len(q));epsilon=1.
+    else:
+        cost=.5*torch.cdist(p,q,compute_mode='donot_use_mm_for_euclid_dist').square()
+        epsilon=float((2*cost.min(0).values.mean()/p.shape[1]).clamp_min(torch.finfo(p.dtype).eps))
     if penalty is not None:
         assert penalty.shape==cost.shape and torch.isfinite(penalty).all()
         cost=cost+epsilon*penalty.detach()
