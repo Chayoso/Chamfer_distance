@@ -33,6 +33,10 @@ they do not establish a successful remedy or a new independent-scene result.
 In the budget-only control with fresh stage handoffs, increasing 50 to 500
 updates per level lowers sampled training CD but raises full-cloud EPE on all
 six reused pairs. Longer optimization alone does not fix the observed mismatch.
+The observed-spacing field comparison and exact-kernel follow-up also fail their
+frozen screens. Twelve exact replays compare CD, robust NN, centroid, MMD and UOT
+at all 54 original stage endpoints. This is another mechanism result, not an
+adopted replacement for the optimizer or an independent-scene evaluation.
 
 Architecture
 ------------
@@ -304,6 +308,47 @@ fall from 9/18 to 5/18. Raw parameter norms grow and accepted fractions shrink.
 The feature-only field also fits better but stays at 4/18 finite GT descents.
 These outcomes do not establish a new optimizer or a range obstruction.
 
+Observed-spacing field comparison
+---------------------------------
+ndp_field_probe.py clones all nine original stopping endpoints on each reused
+pair. It compares symmetric Euclidean CD; saturating NN phi(d)=s(1-exp(-d/s)),
+s=4h; squared centroid distance; Gaussian RFF-MMD at bandwidths 4h and r; and
+geometric unbalanced OT. Here h is pooled within-cloud mean nearest-neighbor
+spacing and r is mean RMS radius. Robust NN is continuous but still nonsmooth
+at NN ties; it is not OAR. The MMD controls are not the complete MMD-Reg method.
+RFF uses 512 paired sine/cosine frequencies with a local, fixed random generator.
+
+Every field uses GD and ridge, with the same seeded spectral damping ratio .01,
+CG tolerance 1e-8 and ceiling 2048. All directions, including the cloned Adam
+direction, have linearized RMS motion h. Zero directions stay zero. This removes
+the earlier dependence on Adam speed. Raw, own-objective trust and common-CD
+trust are tested at caps 1/16, 1/4 and 1. The OT controller uses frozen-plan Q;
+the others use their actual frozen-scale objectives. GT evaluates effects only.
+The original native baseline endpoint and trace must remain exactly identical.
+
+The primary arm has 324 converged solves, 702 directions and 6,318 finite trials.
+The local RFF gradient has median cosine .828 with exact Gaussian MMD. Therefore
+ndp_exact_field_probe.py repeats both MMD bandwidths with exact kernels, without
+changing scales, transfer, motion bounds or gates. All 216 non-MMD field records,
+216 non-MMD solves, 486 control directions and 4,374 control trials match exactly.
+Exact kernels have quadratic pairwise cost; no linear-runtime claim is inherited.
+
+All fields fail the strict screen in both runs. At the 36 4DMatch endpoints,
+the UOT point direction is task-favorable in 33 states, but ridge turns 19 of
+those into task-adverse directions. CD itself has 32 favorable point directions;
+GD loses 16 and ridge loses five. In the 18 HF endpoints, the large-bandwidth MMD
+point field is task-adverse everywhere with either estimator. This separates a
+proposal problem from a transfer problem; neither is solved by a lower surrogate
+loss alone. These are stage-level counts from six pairs, not independent samples.
+
+fields_report.py checks the complete grids, actual solver residuals, normalized
+motion, Armijo/linearization conditions and exact MSE-change identity. It records
+lost point descents and a GT-conditional ray-alignment sufficient condition.
+The latter is an offline explanation, not a deployable GT-free certificate.
+exact_fields_report.py additionally verifies unchanged controls and estimator
+effects. Earlier failed adoption gates remain intact; no native candidate or
+new-scene evaluation has been justified by this field comparison.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -318,6 +363,8 @@ pipeline/trust.py       Observable finite-step acceptance.
 pipeline/continuation.py Native Adam cloning, timed paths, and transfer residuals.
 pipeline/selection.py   Observable-only candidate selection and GT input boundary.
 pipeline/stopping.py    Original stopping instrumentation and fixed Adam clones.
+pipeline/fields.py      Robust, centroid, RFF/exact MMD and unbalanced OT fields.
+pipeline/field_steps.py Common observed motion scale and GT-free finite trials.
 pipeline/controlled.py  Earlier native controller experiments.
 pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
 ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
@@ -329,6 +376,8 @@ descriptor_report.py   Spatial-cost attribution and per-level direction analysis
 selection_report.py    Saved-state selectors and optimizer-only attribution.
 damping_report.py      Ridge-path residual bounds and unchanged adoption gates.
 stopping_report.py     Baseline stopping, continuation, and GT trajectory audit.
+fields_report.py       Endpoint field, transfer and conservative screening audit.
+exact_fields_report.py Exact-kernel comparison and unchanged-control verification.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -394,6 +443,12 @@ With those assets and an idle allocated CUDA GPU:
   python ndp_stopping_probe.py
   python ndp_stopping_handoff.py
   python stopping_report.py
+  mkdir -p paper_revision/fields_20261018
+  python ndp_field_probe.py
+  python fields_report.py
+  mkdir -p paper_revision/fields_20261018/exact
+  python ndp_exact_field_probe.py
+  python exact_fields_report.py
 
 The feature report requires the preceding capacity controls; the weighted report
 also checks the preceding feature and budget controls. The descriptor report
