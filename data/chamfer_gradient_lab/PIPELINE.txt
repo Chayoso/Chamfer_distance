@@ -328,3 +328,23 @@ remain intact. This repairs evaluation arithmetic, not the update algorithm.
  mkdir -p paper_revision/mix_20261018/precise
  python ndp_mix_probe.py --precise-metrics
  python mix_finite_report.py --precise-metrics
+
+Native precision and time-matched continuation
+pipeline/native_mix.py keeps the accepted mixed-direction rule but evaluates
+actual float32 parameter updates and forwards. The start loss and all trial
+losses use native arithmetic; rounding is included in the motion check.
+ndp_native_mix_probe.py tests six controls/candidates at all54 original endpoints
+twice, verifies the previous double directions, and exactly replays the original
+baseline and observed FGR poses. It records per-method setup/direction/controller
+costs. The primary cap1 budget charges FGR preparation both in full and divided
+by nine uses; the latter is an accounting scenario, not a completed trajectory.
+Same-state Adam continues its own native moments. Its first over-budget point
+and best-observed-CD prefix are retained; GT never selects an Adam checkpoint.
+native_mix_report.py validates both repetitions, unchanged local/finite gates,
+and the separately declared compute-matched task screen. GT/Decimal diagnostics
+are excluded from both deployed-cost measurements. Native/double outcomes must
+not be conflated, and any failed family/repetition remains failed.
+This stage requires the precise mixed-study records and frozen FGR poses.
+ mkdir -p paper_revision/native_mix_20261018
+ python ndp_native_mix_probe.py
+ python native_mix_report.py
