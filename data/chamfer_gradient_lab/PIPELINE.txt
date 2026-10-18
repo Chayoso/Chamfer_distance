@@ -1,493 +1,207 @@
 CHAMFER DIRECTION RESEARCH PIPELINE
-===================================
 
-Purpose and current status
---------------------------
-This research asks whether global correspondence can propose useful deformation
-directions that Chamfer-based optimization does not discover, and whether a neural
-deformation model can realize those directions. The current implementation is a
-mechanism study, not an established improvement over the baseline. No candidate
-has passed all adoption gates. The default optimizer remains Chamfer + Adam.
+Purpose and status
+This code separates correspondence quality, neural direction transfer, and step
+acceptance in Chamfer-based registration. No candidate has passed all adoption
+gates; Chamfer + Adam remains the baseline. The analytic examples establish
+possible failure mechanisms, not a successful general registration method.
+Six repeatedly examined development pairs contribute54 correlated endpoints.
+They are not54 independent scenes or an untouched test set. All original
+endpoints still admit additional Chamfer improvement under Adam continuation;
+there is no demonstrated local-minimum escape. Lower Chamfer can raise GT error.
 
-The direction study replays six development pairs at nine states per pair, giving
-54 correlated states, not 54 independent scenes. It compares geometric and FPFH
-transport fields, parameter gradient descent, ridge lifting, and actual Adam.
-The time-matched continuation audit is complete: all 54 starts still improve
-under Adam continuation. No OT-ridge candidate beats the best within-budget Adam
-Chamfer value in this audit. Some candidates improve GT error more than Adam,
-but that does not establish overall superiority or pass the existing gates.
-The subsequent mass-weighted displacement study also passes its numerical checks
-but fails adoption. Better alignment to a proposed displacement is insufficient
-to establish better registration. It reuses the same development states.
-Removing the spatial matching term also fails adoption. None of these controls
-has established an improvement suitable for replacing the baseline optimizer.
-The observable-selection screen also fails all adoption gates. Its cap-1 trials
-reduce Chamfer in every state but do not establish additional GT improvements
-over choosing between GD and Adam. These are reused development records.
-The baseline stopping audit also fails to establish stagnation: all 54 original
-level endpoints and all 54 capped-500 endpoints admit more than 0.1% best-observed
-CD improvement within 100 further Adam updates at the existing learning rate.
-At 33 of the 54 original endpoints, final CD decreases while GT MSE increases.
-These findings support separating objective mismatch from optimizer stagnation;
-they do not establish a successful remedy or a new independent-scene result.
-In the budget-only control with fresh stage handoffs, increasing 50 to 500
-updates per level lowers sampled training CD but raises full-cloud EPE on all
-six reused pairs. Longer optimization alone does not fix the observed mismatch.
-The observed-spacing field comparison and exact-kernel follow-up also fail their
-frozen screens. Twelve exact replays compare CD, robust NN, centroid, MMD and UOT
-at all 54 original stage endpoints. This is another mechanism result, not an
-adopted replacement for the optimizer or an independent-scene evaluation.
+Data and baseline
+Observed source X and target Y enter optimization. Evaluation GT gives the true
+position of each source point. It never enters proposals, transfer, normalization
+or finite acceptance. GT does enter offline research evaluation and adoption
+screening, so these development pairs are not held-out validation.
+4DMatch GT is reconstructed from flow, rotation and translation. The prepared
+HF-derived3DMatch set uses real fragments with a controlled30-degree rotation
+and translation of0.1 source radius; stored GT is the unperturbed source fragment,
+not the official pose benchmark's ground truth. Preserve stored normalization.
 
-Architecture
-------------
-Observed source X and target Y
-        |
-        v
-NDP baseline: 9 deformation levels x 50 Adam updates
-        |
-        +--> final registration --> independent GT evaluation
-        |
-        +--> clone states at levels {0,4,8}, updates {0,25,49}
-                  |
-                  v
-          global correspondence plan P
-          geometric cost / frozen FPFH feature penalty
-                  |
-                  v
-          point force f = P Y - diag(P 1) Z
-                  |
-                  +--> GD: delta_theta = J^T f
-                  |
-                  +--> ridge: (J J^T + gamma I) a = f
-                              delta_theta = J^T a
-                  |
-                  +--> weighted: (J^T R J + gamma I) delta_theta = J^T f
-                                 R = diag(P 1), matrix-free solve
-                  |
-                  v
-          normalize predicted output speed to the actual Adam update
-                  |
-                  v
-          backtracking: objective decrease + output linearization agreement
-                  |
-                  v
-          evaluate actual output, Chamfer change, and GT risk change
+The native loss is symmetric UNSQUARED Euclidean Chamfer:
+ C(Z,Y)=mean_i min_j ||z_i-y_j||+mean_j min_i ||z_i-y_j||.
+The baseline separately centers each cloud, samples at most2,000 points and uses
+nine NDP levels, three hidden layers of width128, frequency start k0=-8,
+axis-angle SE(3) motion, and per-level Adam with learning rate.01.
+The historical fixed-budget loop performs50 updates and a fresh endpoint
+calculation per level. It is a budget adaptation, not a full NDP reproduction.
+The original loop permits500 iterations and early stopping; its small-change
+counter accumulates15 events, which need not be consecutive. The stopping audit
+separates that original loop, a full-ceiling loop with cached stage handoffs,
+and500 fixed-budget updates with fresh handoffs. Instrumented original traces
+must exactly reproduce uninstrumented references, excluding elapsed time.
+Native parameters are float32; cloned direction calculations are float64.
 
-Z denotes the current warped source and J = dZ/dtheta for the active NDP level.
-Every diagnostic trial changes a clone. The original baseline trajectory and its
-Adam moments remain intact; recorded endpoints and traces must replay exactly.
+Pipeline
+ observed X,Y -> baseline NDP -> clone endpoint -> point field f
+  -> parameter update delta -> observed motion normalization
+  -> finite objective/linearization checks -> evaluation against GT.
+Clones leave the original trajectory and Adam moments unchanged. Earlier probes
+use levels0,4,8 and updates0,25,49. The current field/mechanism/joint studies
+instead use all nine ORIGINAL stopping endpoints of each reused pair.
 
-Baseline and objective
-----------------------
-The baseline uses symmetric UNSQUARED Euclidean Chamfer:
+Correspondence
+For a transport plan pi, define row mass r_i=sum_j pi_ij and force
+ f_i=sum_j pi_ij(y_j-z_i).
+The barycentric displacement f_i/r_i is distinct from that force. Zero-mass
+rows have zero force. Transport uses half squared Euclidean costs, observed
+geometric entropy scale epsilon, and relaxed marginal penalty tau=2epsilon.
+Soft, semi-relaxed, unbalanced and balanced models are controls, not novel OT.
+Actual transport residuals must pass; balanced --newton enables refinement.
+FPFH controls use33-dimensional normalized descriptors of CURRENT observed
+clouds: normals radius2h/max30 neighbors, features radius5h/max100 neighbors,
+where h is pooled within-cloud mean nearest-neighbor spacing. The mixed cost
+adds epsilon*0.5*||a_i-b_j||^2/.1^2. Feature-only matching removes spatial cost.
+Descriptors and scales are frozen within a trial. Neither variant is full RobOT.
+Other controls are native CD, saturating NN, centroid alignment and Gaussian MMD.
+Saturating NN is not OAR; MMD fields are not the complete MMD-Reg method.
 
-  CD(Z,Y) = mean_i min_j ||z_i-y_j|| + mean_j min_i ||z_i-y_j||.
+Transfer
+With J=dZ/dtheta, GD uses delta=J^T f. Ordinary ridge solves
+ min_delta .5||J delta-f||^2+.5gamma||delta||^2,
+implemented as delta=J^T(JJ^T+gamma I)^(-1)f with JVP/VJP and CG.
+Weighted displacement fitting instead solves
+ (J^T R J+gamma I)delta=J^T f, R=diag(r_i I).
+This is standard regularized weighted least squares. RobOT already includes
+correspondence-weighted displacement fitting: https://arxiv.org/abs/2111.00648 .
+Row mass is not assumed to be calibrated correspondence confidence.
+Gamma is a fixed ratio of an eight-step seeded kernel power estimate. The
+standard ratio is.01; weak-damping studies use.0001. Historical solver ceilings
+are preserved; accurate field/joint controls allow2048 CG iterations and require
+actual relative residual<=1e-8. No GT selects damping or a favorable state.
+Raw fit residual, ray alignment, shrinkage and normalized error are different
+quantities. Lower fit error does not establish task improvement or prove that
+the remaining error lies outside the model's tangent range.
 
-The source and target are separately centered, matching the historical baseline.
-Each uses at most 2,000 sampled points. The fixed-budget loop makes 50 updates
-and an endpoint evaluation at each of nine levels. Each level has its own Adam
-optimizer (learning rate 0.01). The model uses three hidden layers of width 128,
-frequency start k0=-8, and axis-angle SE(3) motion. Baseline parameters are float32;
-cloned direction calculations use float64. The frozen reference test checks the
-loop against its pre-refactor implementation, including RNG state and losses.
-The original NDP configuration permits up to 500 iterations with early stopping.
-Our fixed 50-update loop is a controlled budget adaptation, not reproduction of
-the complete published benchmark or a collection of converged NDP optima.
+Motion and finite acceptance
+Earlier budget/weighted/descriptor studies match the actual Adam output speed.
+That normalization cannot move if Adam's speed is zero. The current field,
+mechanism and joint studies instead normalize linearized RMS output motion to
+observed within-cloud spacing h; a zero direction stays zero.
+Each direction is tested at caps1/16,1/4,1 under raw, own-objective trust and
+common-CD trust policies. Backtracking permits21 dyadic attempts, requires
+Armijo decrease with coefficient.1 and relative output linearization error<=.1.
+For transport, own-objective acceptance uses the frozen-plan change
+ Q(d)-Q(0)=.5 sum_i r_i||d_i||^2-sum_i f_i dot d_i.
+Other fields use their frozen-scale objectives. Actual nonlinear output is
+always evaluated. Surrogate decrease does not guarantee CD or GT decrease.
 
-A separate baseline-only stopping audit uses the original 500-iteration ceiling
-and original stopping logic. Its small-change counter accumulates 15 events;
-the events need not be consecutive. A second arm disables only those stopping
-checks and runs the full ceiling, preserving the original cached stage handoff.
-A third arm uses the existing fixed-budget loop at 500 updates, evaluating a
-fresh endpoint before stage handoff. This isolates the larger update budget
-from the original capped loop's use of a cached pre-update output.
-At every level endpoint, two independent clones continue Adam for 100 updates
-with the existing moment history and learning-rate multipliers 1 and 0.1.
-Neither path uses GT to choose its updates or termination. Reports separate
-best-observed CD progress, final CD progress and GT error. A finite continuation
-test does not certify stationarity, a local minimum, or global convergence.
-The instrumented original runs must exactly match uninstrumented references.
-Their elapsed times include observation overhead and are not runtime benchmarks.
-This audit reuses six development pairs; it does not replace earlier failed
-adoption gates or evaluate a new registration method.
+Focused mechanism checks
+transfer_mechanism.py separates damping from missing modes in a two-point
+native-CD example. That example alone does not resolve correspondence ambiguity.
+rigid_witness.py strengthens the construction: a centered scalene triangle has
+unique rigid and balanced-OT correspondence, and centroid correction is zero.
+For task E=||Z-G||^2/n, f=-grad C and correct h=(G-Z)/n, a COMMON symmetric PSD
+transfer T obeys grad E dot(Tf)=2 grad C dot(Th). Thus task-harmful CD motion can
+coexist with task-helpful global motion that a CD-decrease test rejects.
+This is elementary symmetry algebra, not a new general optimization theorem.
+The code evaluates all six assignments and actual equal-norm finite steps.
+The constructed J is full rank; it is not asserted to be an observed NDP J.
+Correct matching in this rigid example does not guarantee partial-overlap OT.
 
-Proposal, transfer, and acceptance
----------------------------------
-pipeline/capacity.py implements soft, semi-relaxed, unbalanced, and balanced
-entropic transport. Costs are half squared Euclidean distances. The geometric
-scale sets epsilon; the relaxed marginal penalty uses tau=2*epsilon. Scaling
-residuals must pass the numerical gate; balanced transport can use damped Newton
-refinement when requested with --newton.
+ndp_transfer_factorial.py compares CD/UOT at weak damping, using the preceding
+exact-field standard-damping arm as control. GD/Adam and all original replays
+must match exactly. Weak damping helps UOT descent counts but fails matched-CD
+superiority; one state fails the existing absolute MSE identity tolerance.
 
-pipeline/features.py computes normalized, 33-dimensional FPFH descriptors from
-the observed current source and target. Let h be their pooled mean nearest-
-neighbor spacing. Normal estimation uses radius 2h and at most 30 neighbors;
-FPFH uses radius 5h and at most 100 neighbors. The cost adds epsilon times
-0.5*||descriptor_i-descriptor_j||^2/0.1^2. Features and epsilon are frozen for
-each trial. This is not differentiation through the feature extractor and is
-not a full implementation of RobOT.
+pipeline/joint.py and ndp_joint_probe.py compare one versus four correspondence
+updates inside the SAME fixed-J model. CD uses a touching quadratic upper bound
+of native unsquared distance and rejects exact zero-distance singular weights.
+UOT fixes entropy and marginal penalties from INITIAL geometry. All iterations
+solve for a TOTAL delta from the original endpoint with fixed gamma. Both UOT
+variants retain the INITIAL plan for finite acceptance. The report checks inner
+majorizer/reassignment descent, exact controls and actual finite displacements.
+All432 solves pass and no checked MM inequality fails, but both four-step
+candidates fail adoption. Seven raw finite trials fail the absolute MSE identity
+check; zero accepted controlled trials fail. The global numerical gate remains
+failed. These negative outcomes are retained; neither candidate is deployed.
 
-Distinguish row mass r_i=(P1)_i, barycentric displacement
-v_i=(P Y)_i/r_i-z_i when r_i>0, and force f_i=r_i*v_i. The force-ridge control
-fits FORCE with unweighted regularized least squares:
-
-  min_delta 0.5*||J delta - f||^2 + 0.5*gamma*||delta||^2.
-
-It does not solve a mass-weighted barycentric displacement fit. Gamma is 0.01
-times an eight-step power estimate of the largest eigenvalue of J J^T. The
-matrix-free conjugate-gradient solver reports its actual residual. Raw residual,
-direction agreement, damping shrinkage, and post-normalization residual are
-different quantities. The dedicated audit records each separately. Its ridge
-force-fit median residuals remain about 0.97-0.99 even after positive rescaling;
-this is not, by itself, proof of an unrepresentable target direction.
-
-The weighted control instead solves
-  min_delta 0.5*||sqrt(R)*(J delta - v)||^2 + 0.5*gamma*||delta||^2.
-It reuses the same solver with weighted Jacobian sqrt(R)*J and target
-f/sqrt(r), setting the target to zero at zero-mass rows. Its damping uses the
-same recipe on the weighted kernel. This is standard weighted least squares,
-not a new optimizer. Correspondence-weighted displacement fitting is already
-present in RobOT, NeurIPS 2021, Eq. (8): https://arxiv.org/abs/2111.00648 .
-Transport row masses are not assumed to be calibrated correspondence confidence.
-
-For a nonzero exact weighted solution, the frozen surrogate's initial slope is
-  -f^T J delta = -||sqrt(R)*J delta||^2 - gamma*||delta||^2 < 0.
-This proves surrogate descent, not uniform GT-risk descent. Even an ideal target
-v=-e can hurt uniform risk: for scalar parameter J=(1,2)^T, e=(3,-1)^T,
-R=diag(0.01,1), delta=1.97/(4.01+gamma)>0, the uniform MSE derivative equals
-delta>0. Tests cover this counterexample, the dense normal-equation solution,
-uniform-mass direction equivalence, and global mass-scaling invariance.
-
-For a frozen plan, displacement d=Z_trial-Z has surrogate change
-
-  Q(d)-Q(0) = 0.5*sum_i r_i*||d_i||^2 - sum_i f_i dot d_i.
-
-The primary transport controller tests this surrogate. A separate common-CD
-controller tests Chamfer directly; raw finite steps are diagnostic controls.
-Backtracking requires Armijo decrease (coefficient 0.1) and relative output
-linearization error <=0.1, with up to 21 dyadic attempts and caps 1/16, 1/4, 1.
-The surrogate controller does not guarantee a decrease in Chamfer or GT error.
-The actual nonlinear output is always evaluated. This is a local frozen-plan
-argument, not a global convergence theorem for adaptive features or epsilon.
-
-Evaluation and attribution
---------------------------
-Observed target Y is an input to matching and optimization. GT is the separately
-known position of each source point after the true deformation. The 4DMatch
-loader reconstructs it from flow, rotation, and translation; the prepared HF
-3DMatch experiment uses real fragments with a controlled 30-degree source
-rotation and a translation of 0.1 source radius. Its stored truth is the original
-source fragment before this perturbation, not official pose-benchmark ground
-truth. The loader applies the stored normalization scale. GT is used only
-for evaluation, risk derivatives, and offline development gates. It is absent
-from transport, ridge lifting, and the step controller. Development choices have
-used these evaluations, so these pairs are not an untouched test set.
-
-Reports verify complete state/method/policy grids, solver convergence, exact
-baseline replays, and the identity
-  MSE(Z+d)-MSE(Z) = 2*<Z-GT,d>/N + ||d||^2/N.
-They compare GD and ridge on the same field to isolate transfer, and compare
-feature fields with geometric fields having the SAME marginal model. Adoption
-requires both data families to pass the frozen local and finite-step gates.
-Zero/rejected updates are not rescues. Only passing candidates may proceed to
-new native training trajectories and independent scenes. Current feature
-candidates do not qualify. Neither conference acceptance nor general superiority
-has been established.
-
-Time-matched continuation audit
-------------------------------
-ndp_budget_probe.py clones each native model and its pre-update Adam moments.
-Recomputed first updates must exactly match the original native update. Each
-proposal pays for its Adam speed calibration, model/Jacobian setup, matching,
-transfer, normalization and native finite controller. Trial parameters are
-rounded to float32 and evaluated in the native model. GT diagnostics and record
-writing are excluded from both computation budgets.
-
-Two Adam timing repetitions continue the same active level, inputs and optimizer
-history. This is a local continuation, not the original later-level schedule.
-The main comparison gives Adam its lowest observed CD through the first evaluated
-state after the time deadline. A sensitivity check uses only evaluations strictly
-within the budget. Neither selection uses GT. The study recorded 1,080 native
-trials and 5,432 Adam evaluation states. Budgets were 0.040-0.442 seconds on the
-measured device; Adam reached 5-68 updates at the first post-budget evaluation.
-These timings are not universal hardware-independent compute claims.
-
-No plateau was observed at relative-gain thresholds 1e-6, 1e-4 or 1e-3. The
-smallest strictly within-budget Adam CD gain across comparisons was 0.001231.
-No OT-ridge method beat its matched Adam comparator in both repetitions, with
-either controller. At a differentiable state, an exactly zero parameter gradient
-also rules out negative first derivatives in every parameter direction; finite
-assignment-boundary crossings and algorithmic stagnation are distinct questions.
-
-The current speed normalization has an explicit limitation: if the actual Adam
-output speed is zero, every scaled proposal is also zero. Thus this pipeline
-cannot presently claim escape from exact Adam stagnation. A useful raw direction
-and a nonzero accepted normalized update are different requirements.
-
-Weighted displacement control
------------------------------
-ndp_weighted_probe.py keeps the same matching fields, sampled states, speed scale,
-step caps, controllers, and adoption gates. Each field compares GD, force ridge,
-and mass-weighted fitting. All six baseline endpoints/traces replay exactly;
-old control and force-transfer measurements match the preceding audits exactly.
-The report checks 756 directions, 6,804 finite trials, 432 ridge solves, and
-648 transfer measurements. Weighted fitting lowers the median weighted ray error
-in all eight field/family groups, but every candidate still fails the original
-adoption gates. No weighted candidate has proceeded to a native training run or
-new scene. Its time-matched Adam comparison is therefore not yet performed.
-
-Feature-only correspondence control
-----------------------------------
-ndp_descriptor_probe.py compares the preceding mixed cost with feature-only
-matching. In dimensionless units, the mixed cost is C/epsilon+B; the control
-removes C/epsilon and uses B alone with entropy 1 and relaxed marginal penalty 2.
-It preserves the descriptors, transfer operators, speed scale and adoption gates.
-For frozen descriptors, feature-only OT is spatially constant: its displacement
-force comes from the separate Q fitting objective, not its spatial derivative.
-
-For soft matching, a correct feature margin G and spatial disadvantage A give
-pairwise correspondence odds exp(G-A); removing the spatial term gives exp(G).
-This conditional benefit has an opposite limit: indistinguishable descriptors
-can pull an already correct shape toward its centroid. Neither dominance nor
-correct FPFH correspondence is guaranteed. RobOT already uses feature matching
-and spatial fitting; this experiment is a mechanism control.
-
-The six exact replays again cover 756 directions and 6,804 finite trials, with
-all preceding mixed controls matching exactly. Every feature-only candidate
-fails adoption. In HF, feature-only soft matching improves point-field alignment
-from 4/18 to 7/18 states, but weighted parameter transfer loses three favorable
-directions and achieves finite GT descent in only 4/18 states. Both matching and
-transfer remain limitations. Reports split these effects by deformation level.
-
-Observable selection control
-----------------------------
-pipeline/selection.py takes only method name, CD slope/change, trial acceptance,
-output linearization error and weighted ray residual. It rejects extra fields.
-The adapter discards GT and state identifiers from existing evaluation records.
-The three fixed rules choose the smallest CD slope, the smallest eligible finite
-CD change, or the smallest ray residual among eligible global proposals. Finite
-eligibility requires an accepted cap-1 Q/CD-baseline trial, linearization error
-at most 0.1 and negative CD change. Baselines or identity provide fallbacks.
-
-selection_report.py merges verified weighted/descriptor records: 18 global
-directions plus GD and Adam at each of the same 54 states. It saves each choice
-before evaluating GT outcomes, and reuses that direction at every smaller cap.
-Baseline-only selectors and the fixed feature_soft_weighted proposal test
-whether the global library contributes anything beyond optimizer selection.
-All three rules fail the unchanged gates. This retrospective screen does not
-charge computation or validate a native online selector. A successful future
-selector must pay for every proposal, solve and trial, including rejected ones.
-
-Damping-path control
---------------------
-ndp_damping_probe.py fixes the feature_soft and descriptor_soft proposals and
-varies mass-weighted ridge damping at ratios 1e-2, 1e-3, 1e-4 and 1e-5 to the
-same seeded power estimate. It records raw fit/ray residuals and parameter norms
-before the unchanged Adam-speed normalization and finite-step tests. The 1e-2
-control must reproduce the previous weighted results within 1e-8.
-
-For A=sqrt(R)J and b=R^(-1/2)f, each positive eigenvalue mu of AA^T filters b by
-mu/(mu+gamma). Lowering gamma reduces raw and weighted ray residuals while
-increasing parameter norm. A remaining finite-gamma residual only upper-bounds
-the component outside range(A); it does not prove a tangent-space obstruction.
-Solver residuals bound output error and distinguish actual fit improvements
-from incomplete solves. Neither a lower fit residual nor Q descent guarantees
-better GT alignment or finite nonlinear behavior.
-
-The initial 512-iteration path stopped on an unconverged solve. --accurate reruns
-the same complete comparison in precision/ with 2048 CG iterations and the same
-1e-8 residual tolerance. Historical callers retain the original 128-iteration
-default. Failed partial outputs remain available; they are not merged into the
-complete comparison. No outcome-based damping selection is implemented.
-
-The complete rerun reproduces all six baseline traces and the 1e-2 controls
-exactly. All 432 solves pass (maximum 877 iterations). Lower damping reduces
-transfer error but every candidate fails adoption. In HF, the mixed field's
-median raw weighted error falls from 0.940 to 0.757, while finite GT-descent states
-fall from 9/18 to 5/18. Raw parameter norms grow and accepted fractions shrink.
-The feature-only field also fits better but stays at 4/18 finite GT descents.
-These outcomes do not establish a new optimizer or a range obstruction.
-
-Observed-spacing field comparison
----------------------------------
-ndp_field_probe.py clones all nine original stopping endpoints on each reused
-pair. It compares symmetric Euclidean CD; saturating NN phi(d)=s(1-exp(-d/s)),
-s=4h; squared centroid distance; Gaussian RFF-MMD at bandwidths 4h and r; and
-geometric unbalanced OT. Here h is pooled within-cloud mean nearest-neighbor
-spacing and r is mean RMS radius. Robust NN is continuous but still nonsmooth
-at NN ties; it is not OAR. The MMD controls are not the complete MMD-Reg method.
-RFF uses 512 paired sine/cosine frequencies with a local, fixed random generator.
-
-Every field uses GD and ridge, with the same seeded spectral damping ratio .01,
-CG tolerance 1e-8 and ceiling 2048. All directions, including the cloned Adam
-direction, have linearized RMS motion h. Zero directions stay zero. This removes
-the earlier dependence on Adam speed. Raw, own-objective trust and common-CD
-trust are tested at caps 1/16, 1/4 and 1. The OT controller uses frozen-plan Q;
-the others use their actual frozen-scale objectives. GT evaluates effects only.
-The original native baseline endpoint and trace must remain exactly identical.
-
-The primary arm has 324 converged solves, 702 directions and 6,318 finite trials.
-The local RFF gradient has median cosine .828 with exact Gaussian MMD. Therefore
-ndp_exact_field_probe.py repeats both MMD bandwidths with exact kernels, without
-changing scales, transfer, motion bounds or gates. All 216 non-MMD field records,
-216 non-MMD solves, 486 control directions and 4,374 control trials match exactly.
-Exact kernels have quadratic pairwise cost; no linear-runtime claim is inherited.
-
-All fields fail the strict screen in both runs. At the 36 4DMatch endpoints,
-the UOT point direction is task-favorable in 33 states, but ridge turns 19 of
-those into task-adverse directions. CD itself has 32 favorable point directions;
-GD loses 16 and ridge loses five. In the 18 HF endpoints, the large-bandwidth MMD
-point field is task-adverse everywhere with either estimator. This separates a
-proposal problem from a transfer problem; neither is solved by a lower surrogate
-loss alone. These are stage-level counts from six pairs, not independent samples.
-
-fields_report.py checks the complete grids, actual solver residuals, normalized
-motion, Armijo/linearization conditions and exact MSE-change identity. It records
-lost point descents and a GT-conditional ray-alignment sufficient condition.
-The latter is an offline explanation, not a deployable GT-free certificate.
-exact_fields_report.py additionally verifies unchanged controls and estimator
-effects. Earlier failed adoption gates remain intact; no native candidate or
-new-scene evaluation has been justified by this field comparison.
-
-field_selection_report.py then applies the existing CD-slope, CD-trial and
-eligible-ray rules to the exact-field records. It compares NN-only, NN plus
-centroid, and full libraries, saving 486 choices before GT scoring. The selector
-receives no GT or state identity; CD-ridge joins GD/Adam as a declared baseline.
-Historical callers retain their previous default baseline set. All three rules
-fail the frozen screen, including attribution against the same rule without
-MMD/OT. This is retrospective development analysis, not a new native algorithm.
-The GT-only finite oracle covers 29/36 4D states with NN directions and 36/36
-after adding only centroid directions; adding MMD/OT does not increase that
-coverage. In HF it changes 14/18 to 15/18. Oracle magnitudes can still differ;
-these counts neither establish a deployable selector nor a universal upper bound.
-Ideal point transfer also fails to make any fixed non-CD field beat equally
-ideal CD in both families. Better fitting alone is therefore not a demonstrated
-remedy for this fixed field library.
+Evaluation and advancement
+Reports verify complete grids, exact replay/control equality, solver residuals,
+normalization, acceptance and the exact identity
+ E(Z+d)-E(Z)=2<Z-G,d>/n+||d||^2/n.
+The strict absolute1e-12 identity gate is retained even for large raw steps;
+its failures are disclosed instead of silently relaxing the criterion.
+Frozen screens compare task-descent gains/losses against GD/Adam and declared
+matched controls at tangent and finite scales in BOTH data families. Rejected
+or zero updates do not count as rescues. Counts and error magnitudes are reported
+separately. Only passing candidates can advance to native full trajectories and
+new independent scenes. No current candidate qualifies. Prior favorable
+self-reviews do not establish independent acceptances or conference readiness.
+The budget audit includes model setup, matching, transfer, normalization and
+finite acceptance, excluding evaluation GT and file writing on both sides.
+Adam continuation preserves moments and uses two measured timing repetitions.
+Selectors receive only observed losses, slopes, residuals and acceptance flags;
+retrospective library oracles use GT solely as non-deployable diagnostic bounds.
 
 Code layout
------------
-pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
-pipeline/datasets.py    Prepared local data and evaluation correspondence loaders.
-pipeline/losses.py      Chamfer and historical loss controls.
-pipeline/optim.py       Fixed-budget baseline loop.
-pipeline/runner.py      Fits, independent evaluation, and text records.
-pipeline/capacity.py    Marginal transport models and frozen-plan surrogate.
-pipeline/features.py    Observed FPFH matching penalty.
-pipeline/lifting.py     Jacobian products, conjugate gradients, ridge lifting.
-pipeline/trust.py       Observable finite-step acceptance.
-pipeline/continuation.py Native Adam cloning, timed paths, and transfer residuals.
-pipeline/selection.py   Observable-only candidate selection and GT input boundary.
-pipeline/stopping.py    Original stopping instrumentation and fixed Adam clones.
-pipeline/fields.py      Robust, centroid, RFF/exact MMD and unbalanced OT fields.
-pipeline/field_steps.py Common observed motion scale and GT-free finite trials.
-pipeline/controlled.py  Earlier native controller experiments.
-pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
-ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
-capacity_report.py     Numerical checks and frozen capacity adoption gates.
-feature_report.py      Feature/geometric attribution and plots.
-budget_report.py       Time-bracketed Adam comparison and transfer diagnostics.
-weighted_report.py     Weighted fit attribution and unchanged adoption gates.
-descriptor_report.py   Spatial-cost attribution and per-level direction analysis.
-selection_report.py    Saved-state selectors and optimizer-only attribution.
-damping_report.py      Ridge-path residual bounds and unchanged adoption gates.
-stopping_report.py     Baseline stopping, continuation, and GT trajectory audit.
-fields_report.py       Endpoint field, transfer and conservative screening audit.
-exact_fields_report.py Exact-kernel comparison and unchanged-control verification.
-field_selection_report.py Fixed selectors, library attribution and GT-only bounds.
-tests/                 Mathematical, numerical, controller, and reporting tests.
-tests/fixtures/         Frozen source fixture, independent of result directories.
-scripts/               Pinned model retrieval and six-pair baseline generation.
+pipeline/ contains model/data adapters, losses, optimization, Jacobian solves,
+fields, correspondence, controllers, stopping instrumentation and selection.
+ndp_*_probe.py launches scoped diagnostic clones and refuses reused run folders.
+*_report.py validates saved grids and writes TXT/JSON tables and PNG figures.
+rigid_witness.py and transfer_mechanism.py reproduce analytic constructions.
+tests/ holds mathematical, numerical, controller and reporting checks;
+tests/fixtures/ holds the frozen pre-refactor source fixture.
+scripts/ retrieves pinned upstream definitions and generates reference baselines.
+Small root adapters retain historical imports. Every source is below500 lines.
+This is the only published research document; datasets, results, private proofs,
+checkpoints and caches are not committed.
 
-Small root modules preserve historical imports used by tests and experiments.
-The publication includes their dependency closure, not obsolete source backups,
-experiment outputs, datasets, checkpoints, or caches. Each source file has fewer
-than 500 lines. This document is the only newly added research documentation.
+Setup (run from this document's directory)
+Use a compatible existing Python environment, install a suitable PyTorch build
+and requirements.txt. On Linux:
+ mkdir -p cache/matplotlib tmp paper_revision
+ export PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+ export MPLCONFIGDIR="$PWD/cache/matplotlib" TMPDIR="$PWD/tmp"
+ export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+ python scripts/fetch_ndp.py
+ python -m pytest -q
+The fetcher checks SHA256 hashes of NDP definitions at commit
+63e9e2767e3db96a12bae18146971adeddcb9a4e from
+https://github.com/rabbityl/DeformationPyramid and pinned InfoCD/DCD controls.
+It preserves original function/class logic; upstream licenses still apply.
+Existing different files are not overwritten. For an offline server, transfer
+only the fetched assets/{ndp,infocd,dcd}_official directories into this lab.
+CPU tests require those definitions and Open3D. GPU/data tests skip if resources
+are unavailable; a skip is not validation of experiment reproduction.
 
-Setup and execution (from this document's directory)
-----------------------------------------------------
-Use an existing compatible Python environment. Install the appropriate PyTorch
-build for your hardware, then the packages in requirements.txt. Keep temporary
-files and caches inside this lab. For example, in a Linux shell:
+Prepared data (not redistributed):
+ assets/4dmatch_replication/{100,101,124,125}.npz:
+   s_pc,t_pc,s2t_flow,rot,trans,correspondences
+ assets/hf_3dmatch/{200,201}.npz:
+   source,target,truth,overlap,scale
+Respect original dataset permissions and preparation; arbitrary same-key NPZs
+do not reproduce the study. Set CUDA_VISIBLE_DEVICES to an allocated idle GPU
+and CUDA_CACHE_DISABLE=1 before GPU runs. Import Open3D before pipeline.model.
 
-  mkdir -p cache/matplotlib tmp paper_revision
-  export PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
-  export MPLCONFIGDIR="$PWD/cache/matplotlib" TMPDIR="$PWD/tmp"
-  export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
-  python scripts/fetch_ndp.py
-  python -m pytest -q
-
-The source fetcher checks SHA256 digests of upstream NDP files at commit
-63e9e2767e3db96a12bae18146971adeddcb9a4e of
-https://github.com/rabbityl/DeformationPyramid . It retains the required AST
-definitions without changing their function/class logic. Upstream code remains
-subject to its original license. The downloaded definitions are not committed.
-It also fetches the historical InfoCD and Density-aware Chamfer Distance control
-functions at the commit hashes embedded in the script, checking their SHA256
-digests. Existing matching definitions are retained; different files are never
-overwritten. On a server without Internet access, run the fetcher on a connected
-machine and copy only the resulting assets/*_official directories into this lab.
-
-Dataset-free CPU tests need these downloaded model definitions and Open3D.
-GPU/data replay tests skip when their required resources are unavailable; skips
-are not validation of full experiment reproduction. The benchmark data is not
-redistributed here. Place previously prepared files at:
-  assets/4dmatch_replication/{100,101,124,125}.npz
-  assets/hf_3dmatch/{200,201}.npz
-4DMatch arrays: s_pc, t_pc, s2t_flow, rot, trans, correspondences.
-HF arrays: source, target, truth, overlap, scale.
-Use the existing dataset permissions and the original preparation/normalization;
-an arbitrary NPZ with these field names does not reproduce the recorded study.
-
-With those assets and an idle allocated CUDA GPU:
-  export CUDA_VISIBLE_DEVICES=<allocated GPU index> CUDA_CACHE_DISABLE=1
-  python scripts/baseline.py
-  python ndp_capacity_probe.py --newton
-  python capacity_report.py
-  python ndp_feature_probe.py
-  python feature_report.py
-  python ndp_budget_probe.py
-  python budget_report.py
-  python ndp_weighted_probe.py
-  python weighted_report.py
-  python ndp_descriptor_probe.py
-  python descriptor_report.py
-  mkdir -p paper_revision/selection_20261018 paper_revision/damping_20261018
-  python selection_report.py
-  python ndp_damping_probe.py --accurate
-  python damping_report.py
-  mkdir -p paper_revision/stopping_20261018
-  python ndp_stopping_probe.py
-  python ndp_stopping_handoff.py
-  python stopping_report.py
-  mkdir -p paper_revision/fields_20261018
-  python ndp_field_probe.py
-  python fields_report.py
-  mkdir -p paper_revision/fields_20261018/exact
-  python ndp_exact_field_probe.py
-  python exact_fields_report.py
-  python field_selection_report.py
-
-The feature report requires the preceding capacity controls; the weighted report
-also checks the preceding feature and budget controls. The descriptor report
-checks the weighted study's mixed controls. Selection uses weighted and descriptor
-records; the damping report checks its 1e-2 controls against descriptor records.
-Existing reference
-results may be supplied instead of regenerating baselines. Reports consume local
-TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
-Each pre-fit storage check requires the lab below 800 MB, with a total working
-folder limit of 1 GB. Run directories are never silently reused.
-
-Focused transfer mechanism study
-transfer_mechanism.py verifies an exact two-point unsquared Chamfer example,
-separating ridge damping from a missing output direction. The spectral filter
-is standard; the example does not assert that OT fixes correspondence ambiguity.
-ndp_transfer_factorial.py reuses the endpoint probe with only CD/UOT fields and
-ridge ratio1e-4; the existing exact-field ratio1e-2 arm supplies paired controls.
-Both use identical observed motion scales, controllers, states and fixed seeds.
-transfer_factorial_report.py checks exact GD/Adam controls and original replays,
-reports each frozen contrast, and retains failed numerical/adoption criteria.
-No GT chooses a field, damping, state or step. These are diagnostic clones.
-  mkdir -p paper_revision/mechanism_20261018/weak
-  python transfer_mechanism.py
-  python ndp_transfer_factorial.py
-  python transfer_factorial_report.py
+Current reproduction sequence, with those assets:
+ python scripts/baseline.py
+ mkdir -p paper_revision/stopping_20261018
+ python ndp_stopping_probe.py
+ python ndp_stopping_handoff.py
+ python stopping_report.py
+ mkdir -p paper_revision/fields_20261018/exact
+ python ndp_field_probe.py
+ python fields_report.py
+ python ndp_exact_field_probe.py
+ python exact_fields_report.py
+ python field_selection_report.py
+ mkdir -p paper_revision/mechanism_20261018/weak
+ python transfer_mechanism.py
+ python ndp_transfer_factorial.py
+ python transfer_factorial_report.py
+ mkdir -p paper_revision/joint_20261018
+ python rigid_witness.py
+ python ndp_joint_probe.py
+ python joint_report.py
+Existing verified reference results can replace regeneration. joint_report.py
+requires the exact-field controls and weak-factorial controls; no private prose
+files are required. Historical capacity/feature/budget/weighted/descriptor probes
+and matching reports remain available in that dependency order. Selection needs
+weighted/descriptor records; damping --accurate checks its standard controls
+against descriptor records. Report scripts consume local observations and output
+text/figures only. Every pre-fit storage check requires the lab below800MB;
+the complete working folder must remain below1GB. No unrelated folder or job
+belongs to this pipeline's execution scope.
