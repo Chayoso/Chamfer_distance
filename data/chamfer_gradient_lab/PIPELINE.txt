@@ -476,3 +476,23 @@ its original head-only entry point and report remain unchanged by default.
  mkdir -p paper_revision/head_preconditioner_20261018
  python ndp_pcg_probe.py
  python ndp_pcg_probe.py --report-only
+
+Repeated PCG deployment-cost and Adam-budget audit
+ndp_pcg_timing.py executes two paired production-only proposals/controllers at
+every original endpoint, reversing solver order by pair, level and repetition.
+It reuses the same native trial probe and checks common controls against their
+saved records. The returned cap1 deployment costs include setup, relevant solve,
+mixing, anchor evaluation and controller; all other trial/GT/logging costs are
+excluded. Costs are sums of synchronized deployment operations, not full-fit
+wall times. Both full and nine-use FGR preparation accounts remain explicit.
+Actual-history Adam continues through the first evaluation beyond the larger
+budget. Its first update must match an independent native clone. Last-within,
+first-beyond and best-CD-prefix selections precede their GT evaluations.
+pcg_timing_report.py verifies deadlines and selected histories, exact repeated
+native results, each of the old80 native/16 time cells, and paired acceleration
+in both families in each repetition. Mean task changes and EPE accompany counts.
+Neither faster solver iterations nor these gates establish final registration
+improvement; the earlier failed full-trajectory result remains unresolved.
+ mkdir -p paper_revision/pcg_timing_20261018
+ python ndp_pcg_timing.py
+ python pcg_timing_report.py

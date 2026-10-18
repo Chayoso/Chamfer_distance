@@ -6,11 +6,10 @@ OUT=base.ROOT/'paper_revision/head_preconditioner_20261018'
 METHODS=('cd_gd','adam','fgr_pcg','fgr_pcgmix')
 
 
-def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
-    results={}
-    # Balance which production-only proposal is timed first; this is the screen,
-    # not the later two-repetition matched-time continuation study.
-    order=('fgr_ridgemix','fgr_pcgmix') if (base.PAIRS.index(pair)+level)%2==0 else ('fgr_pcgmix','fgr_ridgemix')
+def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds,repetition=0):
+    results={};costs={};candidate=None
+    # The repeated audit reverses both proposal and controller order.
+    order=('fgr_ridgemix','fgr_pcgmix') if (base.PAIRS.index(pair)+level+repetition)%2==0 else ('fgr_pcgmix','fgr_ridgemix')
     for name in order:results[name]=native.directions(layer,inputs,target,anchor,93000+100*pair+level,method=name)
     result,reference=results['fgr_pcgmix'],results['fgr_ridgemix']
     a,b=reference['solvers']['fgr'],result['solvers']['fgr']
@@ -23,14 +22,15 @@ def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
         mixed_velocity_relative_difference=float((result['directions']['fgr_pcgmix']['velocity']-reference['directions']['fgr_ridgemix']['velocity']).norm())/result['bound']))
     before=[p.detach().double().clone() for p in layer.parameters()]
     path=base.continuation(layer,opt,inputs,target,base.cd,steps=1)
-    _,start,_,_=next(path);_,_,_,params=next(path)
+    _,start,_,_=next(path);_,native_after,_,params=next(path)
+    native_after=native_after.detach()
     adam=[v.detach().double()-p for v,p in zip(params,before)];path.close()
     check=native.directions(layer,inputs,target,None,93000+100*pair+level,method='adam',adam_delta=adam)
     assert base.torch.equal(start.double(),result['native']) and result['initial']==STATES[pair,level]['native_cd']
     result['directions']['adam']=check['directions']['adam']
     gt=truth.double();task=2*(result['start']-gt)/len(gt)
     base.append('solvers',dict(pair=pair,level=level,field='fgr',**b))
-    for method in (*METHODS,'fgr_ridge','fgr_ridgemix'):
+    for method in ('cd_gd','adam',*[m for name in order for m in (name.removesuffix('mix'),name)]):
         item=(reference if method in ('fgr_ridge','fgr_ridgemix') else result)['directions'][method]
         velocity=item['velocity'];old_control=method not in ('fgr_pcg','fgr_pcgmix')
         row=dict(pair=pair,level=level,method=method,risk_derivative=float((task*velocity).sum()),
@@ -47,8 +47,13 @@ def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
                 old=F[pair,level,method,trial['policy'],trial['cap']]
                 assert all(v==old[k] for k,v in value.items() if k!='controller_seconds'),(pair,level,method)
             base.append('reference_finite' if method not in METHODS else 'finite',value)
+            if method in ('fgr_pcgmix','fgr_ridgemix') and trial['cap']==1 and trial['policy']=='trust':
+                source=reference if method=='fgr_ridgemix' else result
+                costs[method]=source['setup_seconds']+item['seconds']+anchor_seconds+trial['controller_seconds']
+                if method=='fgr_pcgmix':candidate={k:value[k] for k in ('risk_change','epe_change','mse_identity_error','cd_change','fraction')}
     base.append('states',dict(pair=pair,level=level,native_cd=result['initial'],exact_common_controls=True))
     (OUT/'progress.json').write_text(base.json.dumps(dict(pair=pair,level=level))+'\n')
+    return dict(native=result['native'],initial=result['initial'],adam_after=native_after,candidate=candidate,costs=costs)
 
 
 def report():
