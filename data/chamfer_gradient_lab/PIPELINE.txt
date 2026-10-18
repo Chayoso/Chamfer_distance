@@ -435,3 +435,23 @@ acceptance gate, a deployment-cost measurement or a controller selected with GT.
  mkdir -p paper_revision/trajectory_projection_20261018
  python ndp_projection_probe.py
  python ndp_projection_probe.py --report-only
+
+Affine translation-head candidate screen
+pipeline/head.py exposes its damping ratio, retaining the old default of .01.
+The optional fgr_headmix direction uses the current FGR anchor residual with a
+1e-4 regularized affine-head solve and the SAME full CD-GD reference and eta=.5
+mixing. It verifies the head velocity against the full-model JVP. The pure head
+component is affine; the mixture can change hidden/rotation parameters and still
+requires native finite-motion and CD acceptance checks. No full-ridge solve is
+used by this candidate; the previous default directions remain unchanged.
+ndp_head_mix_probe.py replays the same six original-stopping fits and frozen FGR
+poses. At all 54 endpoints it rechecks CD-GD and actual-history Adam directions
+and native finite trials against saved controls before reusing other controls.
+Raw and mixed head proposals use the existing three caps and 80-digit task-MSE
+reference. Both families must pass all 40 existing local/finite cells before a
+separate two-repetition timing audit; no full trajectory is authorized by this
+screen alone. Task magnitudes and EPE accompany descent counts. Standard FGR
+and regularized affine readout are controls/building blocks, not novelty claims.
+ mkdir -p paper_revision/fgr_head_20261018
+ python ndp_head_mix_probe.py
+ python ndp_head_mix_probe.py --report-only

@@ -8,10 +8,11 @@ from .lifting import jacobian_products, ridge_lift
 from .field_steps import scale_direction
 from .direction_mix import mix_fraction
 from .trust import select_step
+from .head import translation_lift
 
 
 def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None):
-    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix'):
+    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix'):
         raise ValueError('Unknown production direction')
     begin=tick(inputs)
     native=layer(inputs)[0].detach();initial=float(cd(native,target))
@@ -27,10 +28,19 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
     if anchor is not None:forces['fgr']=anchor-start
     needed={None:(('cd','gd'),('cd','ridge'),('fgr','gd'),('fgr','ridge')),
         'adam':(), 'cd_ridge':(('cd','ridge'),),
-        'fgr_gdmix':(('cd','gd'),('fgr','gd')), 'fgr_ridgemix':(('cd','gd'),('fgr','ridge'))}
+        'fgr_gdmix':(('cd','gd'),('fgr','gd')), 'fgr_ridgemix':(('cd','gd'),('fgr','ridge')),
+        'fgr_headmix':(('cd','gd'),('fgr','head'))}
     for field,transfer in needed[method]:
         begin=tick(inputs);force=forces[field]
         if transfer=='gd':raw=transpose(force)
+        elif transfer=='head':
+            raw,solver=translation_lift(model,x,-force,damping_ratio=.0001)
+            predicted=solver.pop('velocity');actual=forward(raw)
+            solver['jvp_relative_error']=float((actual-predicted).norm()/predicted.norm().clamp_min(1e-30))
+            solver['transfer_relative_error']=float((actual-force).norm()/force.norm().clamp_min(1e-30))
+            solvers[field]=solver
+            if not solver['converged'] or solver['jvp_relative_error']>1e-10:
+                raise RuntimeError(f'Invalid affine-head solve: {solver}')
         else:
             raw,solver=ridge_lift(forward,transpose,-force,seed,damping_ratio=.0001,maxiter=2048)
             solvers[field]=solver
@@ -41,7 +51,8 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         if adam_delta is None:raise ValueError('An actual Adam delta is required')
         begin=tick(inputs);delta,velocity=scale_direction(adam_delta,forward,bound)
         result['adam']=dict(delta=delta,velocity=velocity,seconds=tick(inputs)-begin)
-    for transfer in ('gd','ridge') if method is None else (('gd',) if method=='fgr_gdmix' else ('ridge',) if method=='fgr_ridgemix' else ()):
+    transfers={None:('gd','ridge'),'fgr_gdmix':('gd',),'fgr_ridgemix':('ridge',),'fgr_headmix':('head',)}
+    for transfer in transfers.get(method,()):
         c=result['cd_gd'];sc=float((gradient*c['velocity']).sum())
         begin=tick(inputs);a=result['fgr_'+transfer]
         sa=float((gradient*a['velocity']).sum());beta=mix_fraction(sa,sc)

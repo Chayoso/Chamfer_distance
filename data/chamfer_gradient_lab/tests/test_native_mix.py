@@ -52,3 +52,19 @@ def test_restricted_direction_and_single_cap_match_diagnostic_path(monkeypatch):
         for old,new in zip(all_caps[-2:],single):
             assert {k:v for k,v in old[0].items() if k!='controller_seconds'}=={k:v for k,v in new[0].items() if k!='controller_seconds'}
             assert torch.equal(old[1],new[1])
+
+
+def test_head_mixed_direction_uses_no_full_ridge_and_preserves_cd_slope(monkeypatch):
+    import pipeline.native_mix as native
+    from pipeline.model import official
+    def forbidden(*args,**kwargs):raise AssertionError('The affine-head path must not solve full ridge')
+    monkeypatch.setattr(native,'ridge_lift',forbidden)
+    torch.manual_seed(90)
+    model=official()['NDPLayer'](depth=2,width=8,k0=-2,m=1,rotation_format='axis_angle')
+    x=torch.randn(17,3);q=x+.1;before=[p.detach().clone() for p in model.parameters()]
+    result=directions(model,x,q,x.double()+torch.tensor([.4,-.2,.1]),19,method='fgr_headmix')
+    d=result['directions'];g=result['gradient'];sc=float((g*d['cd_gd']['velocity']).sum())
+    assert sc<0 and set(d)=={'cd_gd','fgr_head','fgr_headmix'}
+    assert float((g*d['fgr_headmix']['velocity']).sum())<=.5*sc+1e-12
+    assert result['solvers']['fgr']['converged'] and result['solvers']['fgr']['jvp_relative_error']<=1e-10
+    for p,old in zip(model.parameters(),before):assert torch.equal(p,old)
