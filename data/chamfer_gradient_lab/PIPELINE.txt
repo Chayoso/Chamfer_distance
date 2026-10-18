@@ -205,3 +205,39 @@ against descriptor records. Report scripts consume local observations and output
 text/figures only. Every pre-fit storage check requires the lab below800MB;
 the complete working folder must remain below1GB. No unrelated folder or job
 belongs to this pipeline's execution scope.
+
+Implementation and accepted-state refresh audit
+tests/test_joint_reference.py compares all four total updates to independent
+dense normal equations, checks nonzero refresh coordinates, and solves UOT's
+primal KKT equations with SciPy instead of the production Sinkhorn code. It also
+checks the regularizer shift needed to express a total solve as an increment.
+These cases pass; they are evidence against the tested algebra mistakes, not
+exhaustive correctness or a guarantee of task descent.
+
+The old fixed-J experiment does not make four actual network updates. Its last
+matching position can be much farther from the start than the eventual accepted
+output. pipeline/refresh.py instead makes four accepted nonlinear updates,
+rebuilding J each time. Frozen and refreshed matching arms share the SAME true
+CD or minimized UOT acceptance objective, initial entropy, damping and motion
+scale. UOT finite acceptance therefore re-solves matching; this is costlier
+than checking frozen Q. Four updates are not an equal-time comparison to one.
+GT is absent from the trajectory constructor. No baseline parameters are changed.
+
+CUDA index_add makes historical CD weights/forces differ in their low bits on
+identical inputs. The new code enables deterministic algorithms only during CD
+matching and restores the setting immediately. Historical CD exact-control
+failures remain recorded; solver and MSE-identity thresholds are unchanged.
+UOT historical controls retain exact comparisons. Both new arms must have
+identical first outputs and the complete original baselines must replay exactly.
+Stopped audits are preserved separately from the complete verified/ rerun.
+If the initial finite-difference spacings cross a piecewise-smooth branch, the
+check shrinks spacing down to2^-26, retaining the same1e-4 relative threshold.
+ndp_refresh_audit.py records54 JVP/VJP/finite-difference checks and864 step rows.
+refresh_report.py separates positional mismatch, reproducibility, objective
+decrease and task outcomes. This audit alone cannot establish adoption.
+Its post-hoc trajectory figure and slope counts separate task-increasing tangent
+predictions from finite-step outcomes; they do not certify all ReLU derivatives.
+ mkdir -p paper_revision/refresh_audit_20261018/verified
+ python ndp_refresh_audit.py
+ python refresh_report.py
+The report requires the preceding joint study and its verified/ audit records.
