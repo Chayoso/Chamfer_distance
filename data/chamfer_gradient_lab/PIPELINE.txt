@@ -274,3 +274,25 @@ Lower residual at finite damping does not identify an irreducible range error.
  mkdir -p paper_revision/ridge_bracket_20261018
  python ndp_ridge_bracket.py
  python ridge_bracket_report.py
+
+Known global registration and frozen-anchor control
+global_registration_control.py uses Open3D0.19 FGR on full observed clouds, with
+the same voxel/FPFH preparation as the saved RANSAC control. The version0.19
+example supplies distance1.5voxels,64 iterations and1000 tuples; all remaining
+options are explicit. The spacing-based voxel rule is a declared adaptation.
+All six transforms are saved before GT evaluation. The independent FPFH nearest-
+neighbor audit reports geometric support and precision, not native FGR filtering.
+This established method is a diagnostic control, not a novel proposed algorithm.
+ndp_fgr_probe.py transfers the fixed rigidly transformed ORIGINAL source samples
+to all54 original NDP endpoints, using the original target centering. It compares
+direct pullback and ridge against CD-GD, CD-ridge and original-history Adam.
+The existing finite_trials controller and fields_report.assess gates are reused;
+standalone improvement versus centroid is insufficient for neural adoption.
+GT is used only for evaluation; no pose/seed/parameter is selected with GT.
+The pose stage requires the saved joint-study RANSAC controls; the neural stage
+requires the original stopping reference, and the report checks joint controls.
+ mkdir -p paper_revision/fgr_20261018
+ python global_registration_control.py
+ mkdir -p paper_revision/fgr_20261018/neural
+ python ndp_fgr_probe.py
+ python fgr_report.py
