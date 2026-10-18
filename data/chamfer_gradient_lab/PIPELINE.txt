@@ -296,3 +296,35 @@ requires the original stopping reference, and the report checks joint controls.
  mkdir -p paper_revision/fgr_20261018/neural
  python ndp_fgr_probe.py
  python fgr_report.py
+
+Observed-loss direction mixing
+direction_mix_report.py freezes one coefficient per original endpoint using only
+the FGR-ridge and CD-GD Chamfer slopes. Both velocities have the same norm. It
+chooses the least CD-GD mixing that retains half of CD-GD's local CD decrease,
+then normalizes the mixed parameter step to the same output motion bound.
+pipeline/direction_mix.py proves this via a scalar constraint and supplies norm
+bounds for task-sign evaluation when only stored slopes are available. The
+evaluation-only existence audit never chooses a deployed coefficient with GT.
+This is a diagnostic use of established gradient-conflict correction ideas.
+If the original GD/Adam tangent conditions pass, ndp_mix_probe.py recomputes
+actual mixed parameter steps, verifies their JVPs and performs unchanged finite
+trials using real Chamfer acceptance. An identically corrected FGR-GD arm checks
+transfer attribution. mix_finite_report.py retains both families and all original
+direction/finite conditions. Passing the tangent screen is not adoption.
+Each finite MSE identity is recorded. A failed float64 identity gets a separate
+80-digit Decimal reference in pipeline/mse_reference.py; the historical absolute
+gate and failure status remain visible and are not silently overridden.
+These scripts require the saved FGR study, frozen choices and original references.
+ mkdir -p paper_revision/mix_20261018
+ python direction_mix_report.py
+ mkdir -p paper_revision/mix_20261018/finite
+ python ndp_mix_probe.py
+ python mix_finite_report.py
+An optional --precise-metrics replay writes a separate precise/ study and
+evaluates every finite task identity at80-digit precision with the same absolute
+1e-12 threshold. The report requires exact proposal/observed-trial parity and
+unchanged task classifications/counts relative to finite/. Historical results
+remain intact. This repairs evaluation arithmetic, not the update algorithm.
+ mkdir -p paper_revision/mix_20261018/precise
+ python ndp_mix_probe.py --precise-metrics
+ python mix_finite_report.py --precise-metrics
