@@ -17,6 +17,14 @@ def test_accepted_refresh_uses_actual_network_and_shared_objective():
     q = torch.tensor([[.8, .7], [1.2, .1], [.7, 1.3], [1.6, .9]], dtype=x.dtype)
     for kind in ('cd', 'uot'):
         arms = [list(accepted_path(model, x, q, kind, flag, 13, .05)) for flag in (False, True)]
+        observations = []
+        observed = list(accepted_path(model, x, q, kind, True, 13, .05,
+            observe=lambda *args: observations.append(tuple(v.clone() for v in args))))
+        assert len(observations) == 4
+        for original, repeated in zip(arms[1], observed):
+            assert original[0] == repeated[0]
+            for a, b in zip(original[1:], repeated[1:]):
+                if a is not None: torch.testing.assert_close(a, b, rtol=0, atol=0)
         torch.testing.assert_close(arms[0][0][4], arms[1][0][4], rtol=0, atol=0)
         for rows in arms:
             assert len(rows) == 4 and len({r[0]['solve']['damping'] for r in rows}) == 1

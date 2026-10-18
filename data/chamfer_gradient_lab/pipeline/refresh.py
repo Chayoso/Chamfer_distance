@@ -8,7 +8,7 @@ from .capacity import frozen_change
 from .trust import select_step
 
 
-def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4):
+def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4, observe=None):
     """No GT. Both arms rebuild J and use the same true observed objective."""
     model = copy.deepcopy(layer).double()
     initial = model(inputs)[0].detach()
@@ -69,6 +69,8 @@ def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4):
                 old_output = evaluate(old_fraction)[0] if old_fraction else p
             else:
                 old_fraction, old_output = fraction, after
+        if observe is not None:
+            observe(p, force, weights, forward(raw))  # After all acceptance decisions.
         with torch.no_grad():
             for live, start, d in zip(params, saved, delta): live.copy_(start+fraction*d)
         error = float((after-p-fraction*velocity).norm())/(fraction*bound) if fraction else 0.

@@ -241,3 +241,21 @@ predictions from finite-step outcomes; they do not certify all ReLU derivatives.
  python ndp_refresh_audit.py
  python refresh_report.py
 The report requires the preceding joint study and its verified/ audit records.
+
+Proposal-versus-transfer attribution
+ndp_refresh_attribution.py replays all864 accepted-path records exactly. A small
+optional observer in accepted_path runs after step selection, without changing
+the proposal, solver or controller. GT is read only by the separate evaluation
+function in slope_attribution.py. It compares force f, the actual least-squares
+target d=f/m, and raw neural motion u=J*delta. Mass normalization can change task
+alignment before neural transfer; zero-mass movement is recorded separately.
+The identity g.u=g.d+g.(u-d), task cosines and transfer residuals locate sign
+changes. An elementary exact ridge example confirms that a useful d can become
+harmful under regularized transfer without an implementation bug. This does
+not isolate limited representation from damping, or provide a new method.
+attribution_report.py checks complete replay and reports per-family/pair counts
+and a direction plot. Counts remain correlated development diagnostics, not
+independent observations, and GT-based alignment is never a deployed selector.
+ mkdir -p paper_revision/attribution_20261018
+ python ndp_refresh_attribution.py
+ python attribution_report.py
