@@ -9,7 +9,7 @@ deformation model can realize those directions. The current implementation is a
 mechanism study, not an established improvement over the baseline. No candidate
 has passed all adoption gates. The default optimizer remains Chamfer + Adam.
 
-The latest study replays six development pairs at nine states per pair, giving
+The direction study replays six development pairs at nine states per pair, giving
 54 correlated states, not 54 independent scenes. It compares geometric and FPFH
 transport fields, parameter gradient descent, ridge lifting, and actual Adam.
 The time-matched continuation audit is complete: all 54 starts still improve
@@ -24,6 +24,15 @@ has established an improvement suitable for replacing the baseline optimizer.
 The observable-selection screen also fails all adoption gates. Its cap-1 trials
 reduce Chamfer in every state but do not establish additional GT improvements
 over choosing between GD and Adam. These are reused development records.
+The baseline stopping audit also fails to establish stagnation: all 54 original
+level endpoints and all 54 capped-500 endpoints admit more than 0.1% best-observed
+CD improvement within 100 further Adam updates at the existing learning rate.
+At 33 of the 54 original endpoints, final CD decreases while GT MSE increases.
+These findings support separating objective mismatch from optimizer stagnation;
+they do not establish a successful remedy or a new independent-scene result.
+In the budget-only control with fresh stage handoffs, increasing 50 to 500
+updates per level lowers sampled training CD but raises full-cloud EPE on all
+six reused pairs. Longer optimization alone does not fix the observed mismatch.
 
 Architecture
 ------------
@@ -80,6 +89,23 @@ loop against its pre-refactor implementation, including RNG state and losses.
 The original NDP configuration permits up to 500 iterations with early stopping.
 Our fixed 50-update loop is a controlled budget adaptation, not reproduction of
 the complete published benchmark or a collection of converged NDP optima.
+
+A separate baseline-only stopping audit uses the original 500-iteration ceiling
+and original stopping logic. Its small-change counter accumulates 15 events;
+the events need not be consecutive. A second arm disables only those stopping
+checks and runs the full ceiling, preserving the original cached stage handoff.
+A third arm uses the existing fixed-budget loop at 500 updates, evaluating a
+fresh endpoint before stage handoff. This isolates the larger update budget
+from the original capped loop's use of a cached pre-update output.
+At every level endpoint, two independent clones continue Adam for 100 updates
+with the existing moment history and learning-rate multipliers 1 and 0.1.
+Neither path uses GT to choose its updates or termination. Reports separate
+best-observed CD progress, final CD progress and GT error. A finite continuation
+test does not certify stationarity, a local minimum, or global convergence.
+The instrumented original runs must exactly match uninstrumented references.
+Their elapsed times include observation overhead and are not runtime benchmarks.
+This audit reuses six development pairs; it does not replace earlier failed
+adoption gates or evaluate a new registration method.
 
 Proposal, transfer, and acceptance
 ---------------------------------
@@ -291,6 +317,7 @@ pipeline/lifting.py     Jacobian products, conjugate gradients, ridge lifting.
 pipeline/trust.py       Observable finite-step acceptance.
 pipeline/continuation.py Native Adam cloning, timed paths, and transfer residuals.
 pipeline/selection.py   Observable-only candidate selection and GT input boundary.
+pipeline/stopping.py    Original stopping instrumentation and fixed Adam clones.
 pipeline/controlled.py  Earlier native controller experiments.
 pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
 ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
@@ -301,6 +328,7 @@ weighted_report.py     Weighted fit attribution and unchanged adoption gates.
 descriptor_report.py   Spatial-cost attribution and per-level direction analysis.
 selection_report.py    Saved-state selectors and optimizer-only attribution.
 damping_report.py      Ridge-path residual bounds and unchanged adoption gates.
+stopping_report.py     Baseline stopping, continuation, and GT trajectory audit.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -362,6 +390,10 @@ With those assets and an idle allocated CUDA GPU:
   python selection_report.py
   python ndp_damping_probe.py --accurate
   python damping_report.py
+  mkdir -p paper_revision/stopping_20261018
+  python ndp_stopping_probe.py
+  python ndp_stopping_handoff.py
+  python stopping_report.py
 
 The feature report requires the preceding capacity controls; the weighted report
 also checks the preceding feature and budget controls. The descriptor report
