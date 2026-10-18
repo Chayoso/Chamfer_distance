@@ -21,6 +21,9 @@ but fails adoption. Better alignment to a proposed displacement is insufficient
 to establish better registration. It reuses the same development states.
 Removing the spatial matching term also fails adoption. None of these controls
 has established an improvement suitable for replacing the baseline optimizer.
+The observable-selection screen also fails all adoption gates. Its cap-1 trials
+reduce Chamfer in every state but do not establish additional GT improvements
+over choosing between GD and Adam. These are reused development records.
 
 Architecture
 ------------
@@ -226,6 +229,55 @@ from 4/18 to 7/18 states, but weighted parameter transfer loses three favorable
 directions and achieves finite GT descent in only 4/18 states. Both matching and
 transfer remain limitations. Reports split these effects by deformation level.
 
+Observable selection control
+----------------------------
+pipeline/selection.py takes only method name, CD slope/change, trial acceptance,
+output linearization error and weighted ray residual. It rejects extra fields.
+The adapter discards GT and state identifiers from existing evaluation records.
+The three fixed rules choose the smallest CD slope, the smallest eligible finite
+CD change, or the smallest ray residual among eligible global proposals. Finite
+eligibility requires an accepted cap-1 Q/CD-baseline trial, linearization error
+at most 0.1 and negative CD change. Baselines or identity provide fallbacks.
+
+selection_report.py merges verified weighted/descriptor records: 18 global
+directions plus GD and Adam at each of the same 54 states. It saves each choice
+before evaluating GT outcomes, and reuses that direction at every smaller cap.
+Baseline-only selectors and the fixed feature_soft_weighted proposal test
+whether the global library contributes anything beyond optimizer selection.
+All three rules fail the unchanged gates. This retrospective screen does not
+charge computation or validate a native online selector. A successful future
+selector must pay for every proposal, solve and trial, including rejected ones.
+
+Damping-path control
+--------------------
+ndp_damping_probe.py fixes the feature_soft and descriptor_soft proposals and
+varies mass-weighted ridge damping at ratios 1e-2, 1e-3, 1e-4 and 1e-5 to the
+same seeded power estimate. It records raw fit/ray residuals and parameter norms
+before the unchanged Adam-speed normalization and finite-step tests. The 1e-2
+control must reproduce the previous weighted results within 1e-8.
+
+For A=sqrt(R)J and b=R^(-1/2)f, each positive eigenvalue mu of AA^T filters b by
+mu/(mu+gamma). Lowering gamma reduces raw and weighted ray residuals while
+increasing parameter norm. A remaining finite-gamma residual only upper-bounds
+the component outside range(A); it does not prove a tangent-space obstruction.
+Solver residuals bound output error and distinguish actual fit improvements
+from incomplete solves. Neither a lower fit residual nor Q descent guarantees
+better GT alignment or finite nonlinear behavior.
+
+The initial 512-iteration path stopped on an unconverged solve. --accurate reruns
+the same complete comparison in precision/ with 2048 CG iterations and the same
+1e-8 residual tolerance. Historical callers retain the original 128-iteration
+default. Failed partial outputs remain available; they are not merged into the
+complete comparison. No outcome-based damping selection is implemented.
+
+The complete rerun reproduces all six baseline traces and the 1e-2 controls
+exactly. All 432 solves pass (maximum 877 iterations). Lower damping reduces
+transfer error but every candidate fails adoption. In HF, the mixed field's
+median raw weighted error falls from 0.940 to 0.757, while finite GT-descent states
+fall from 9/18 to 5/18. Raw parameter norms grow and accepted fractions shrink.
+The feature-only field also fits better but stays at 4/18 finite GT descents.
+These outcomes do not establish a new optimizer or a range obstruction.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -238,6 +290,7 @@ pipeline/features.py    Observed FPFH matching penalty.
 pipeline/lifting.py     Jacobian products, conjugate gradients, ridge lifting.
 pipeline/trust.py       Observable finite-step acceptance.
 pipeline/continuation.py Native Adam cloning, timed paths, and transfer residuals.
+pipeline/selection.py   Observable-only candidate selection and GT input boundary.
 pipeline/controlled.py  Earlier native controller experiments.
 pipeline/{graph,head,metric,posterior}.py  Earlier diagnostic controls.
 ndp_*_probe.py          Clone-state experiments; refuse existing run directories.
@@ -246,6 +299,8 @@ feature_report.py      Feature/geometric attribution and plots.
 budget_report.py       Time-bracketed Adam comparison and transfer diagnostics.
 weighted_report.py     Weighted fit attribution and unchanged adoption gates.
 descriptor_report.py   Spatial-cost attribution and per-level direction analysis.
+selection_report.py    Saved-state selectors and optimizer-only attribution.
+damping_report.py      Ridge-path residual bounds and unchanged adoption gates.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -303,10 +358,16 @@ With those assets and an idle allocated CUDA GPU:
   python weighted_report.py
   python ndp_descriptor_probe.py
   python descriptor_report.py
+  mkdir -p paper_revision/selection_20261018 paper_revision/damping_20261018
+  python selection_report.py
+  python ndp_damping_probe.py --accurate
+  python damping_report.py
 
 The feature report requires the preceding capacity controls; the weighted report
 also checks the preceding feature and budget controls. The descriptor report
-checks the weighted study's mixed controls. Existing reference
+checks the weighted study's mixed controls. Selection uses weighted and descriptor
+records; the damping report checks its 1e-2 controls against descriptor records.
+Existing reference
 results may be supplied instead of regenerating baselines. Reports consume local
 TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
 Each pre-fit storage check requires the lab below 800 MB, with a total working

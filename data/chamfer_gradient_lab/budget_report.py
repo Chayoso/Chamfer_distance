@@ -127,6 +127,7 @@ def main():
     figure(s,t,f,c)
     sources=[OUT/(n+'.txt') for n in ('states','transfer','finite','comparison','adam','PROTOCOL','PROOF')]
     sources += [ROOT/'pipeline/continuation.py',ROOT/'ndp_budget_probe.py',Path(__file__)]
+    sources=[p for p in sources if p.name not in ('PROTOCOL.txt','PROOF.txt','NUMERICAL_AMENDMENT.txt') or p.is_file()]
     (OUT/'report_hashes.json').write_text(json.dumps({p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},indent=2)+'\n')
     print(json.dumps(summary,indent=2))
 

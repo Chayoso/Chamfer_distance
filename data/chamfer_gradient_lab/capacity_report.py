@@ -115,6 +115,7 @@ def main():
         gates=gates,advance_to_periodic_native_fit=[m for m in METHODS if not m.startswith('soft') and numerical and all(r['primary_gate'] and r['controlled_baseline_gate'] and r['attribution_gate'] for r in gates if r['candidate']==m)])
     (OUT/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     paths=list((OUT/'probe').glob('*.txt'))+[OUT/'probe/integrity.json',PHASE/'PROTOCOL.txt',PHASE/'NUMERICAL_AMENDMENT.txt',ROOT/'pipeline/capacity.py',ROOT/'ndp_capacity_probe.py',Path(__file__)]
+    paths=[p for p in paths if p.name not in ('PROTOCOL.txt','PROOF.txt','NUMERICAL_AMENDMENT.txt') or p.is_file()]
     (OUT/'input_hashes.json').write_text(json.dumps({p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},indent=2)+'\n')
     figure(counts,sr);print(json.dumps(summary,indent=2))
     for r in counts:

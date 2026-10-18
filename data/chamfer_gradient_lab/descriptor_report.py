@@ -76,6 +76,7 @@ def main():
     (OUT/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     figure(counts,alignment)
     paths=list((OUT/'probe').glob('*.txt'))+[OUT/'PROTOCOL.txt',OUT/'PROOF.txt',OUT/'probe/integrity.json',ROOT/'pipeline/capacity.py',ROOT/'ndp_descriptor_probe.py',Path(__file__)]
+    paths=[p for p in paths if p.name not in ('PROTOCOL.txt','PROOF.txt','NUMERICAL_AMENDMENT.txt') or p.is_file()]
     (OUT/'report_hashes.json').write_text(json.dumps({p.relative_to(ROOT).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in paths},indent=2)+'\n')
     print(json.dumps(summary,indent=2))
 

@@ -42,7 +42,7 @@ def cg(operator, rhs, rtol=1e-8, maxiter=128):
                   relative_residual=residual/initial,converged=residual <= rtol*initial)
 
 
-def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01):
+def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01, maxiter=128):
     """Return -J^T(K+lambda I)^-1 g and auditable numerical diagnostics."""
     calls = 0
 
@@ -62,13 +62,13 @@ def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01):
     damping = damping_ratio*spectral
     if damping <= 0 or not torch.isfinite(torch.tensor(damping)):
         raise RuntimeError('Invalid damping')
-    dual, info = cg(lambda z:kernel(z)+damping*z,gradient.detach())
+    dual, info = cg(lambda z:kernel(z)+damping*z,gradient.detach(),maxiter=maxiter)
     delta = [-g for g in transpose(dual)]
     info.update(spectral_estimate=spectral,damping=damping,kernel_calls=calls)
     return delta,info
 
 
-def weighted_lift(forward, transpose, force, mass, seed, damping_ratio=.01):
+def weighted_lift(forward, transpose, force, mass, seed, damping_ratio=.01, maxiter=128):
     """Regularized mass-weighted displacement fit, including zero-mass rows."""
     if mass.shape != force.shape[:-1] or not torch.isfinite(mass).all() or not torch.isfinite(force).all():
         raise ValueError('Finite force and one mass per point are required')
@@ -78,4 +78,4 @@ def weighted_lift(forward, transpose, force, mass, seed, damping_ratio=.01):
     target = force/root.clamp_min(torch.finfo(force.dtype).tiny)
     weighted_forward = lambda delta: root*forward(delta)
     weighted_transpose = lambda vector: transpose(root*vector)
-    return ridge_lift(weighted_forward, weighted_transpose, -target, seed, damping_ratio)
+    return ridge_lift(weighted_forward, weighted_transpose, -target, seed, damping_ratio, maxiter)
