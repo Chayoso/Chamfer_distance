@@ -8,7 +8,7 @@ from .capacity import frozen_change
 from .trust import select_step
 
 
-def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4, observe=None):
+def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4, observe=None, damping_ratio=.0001):
     """No GT. Both arms rebuild J and use the same true observed objective."""
     model = copy.deepcopy(layer).double()
     initial = model(inputs)[0].detach()
@@ -34,7 +34,7 @@ def accepted_path(layer, inputs, q, kind, refresh, seed, bound, steps=4, observe
         frozen_force = force0-mass0[:, None]*(p-initial)
         force, weights = (current_force, mass) if refresh else (frozen_force, mass0)
         if damping is None:
-            raw, solve = weighted_lift(forward, transpose, force, weights, seed, .0001, 2048)
+            raw, solve = weighted_lift(forward, transpose, force, weights, seed, damping_ratio, 2048)
             damping = solve['damping']
         else:
             raw, solve = fixed_lift(forward, transpose, force, weights, damping)

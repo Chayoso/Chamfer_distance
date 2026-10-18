@@ -37,3 +37,25 @@ def test_accepted_refresh_uses_actual_network_and_shared_objective():
         # Each policy really follows its own accepted nonlinear trajectory.
         assert (arms[0][-1][4]-arms[1][-1][4]).norm() > 1e-8
     torch.testing.assert_close(model.theta, saved, rtol=0, atol=0)
+
+
+def test_damping_bracket_keeps_the_same_initial_matching_and_scale():
+    model = Warp()
+    x = torch.tensor([[-.3, .2], [.4, -.1], [.2, .5]], dtype=torch.float64)
+    q = torch.tensor([[.8, .7], [1.2, .1], [.7, 1.3], [1.6, .9]], dtype=x.dtype)
+    for kind in ('cd','uot'):
+        matches, rows = [], []
+        for factor in (.1,1.,10.):
+            result = list(accepted_path(model,x,q,kind,True,13,.05,steps=1,
+                observe=lambda p,f,m,u:matches.append((f.clone(),m.clone())),damping_ratio=.0001*factor))[0]
+            rows.append(result)
+        for match in matches:
+            for a,b in zip(matches[0],match):torch.testing.assert_close(a,b,rtol=0,atol=0)
+        center = rows[1][0]['solve']
+        for factor,r in zip((.1,1.,10.),rows):
+            assert r[0]['solve']['spectral_estimate']==center['spectral_estimate']
+            assert abs(r[0]['solve']['damping']/center['damping']-factor)<1e-12
+            assert abs(float(r[3].norm())-.05)<1e-12
+        original = list(accepted_path(model,x,q,kind,True,13,.05,steps=1))[0]
+        assert original[0] == rows[1][0]
+        torch.testing.assert_close(original[4],rows[1][4],rtol=0,atol=0)

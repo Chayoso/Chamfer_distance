@@ -259,3 +259,18 @@ independent observations, and GT-based alignment is never a deployed selector.
  mkdir -p paper_revision/attribution_20261018
  python ndp_refresh_attribution.py
  python attribution_report.py
+
+Fixed-state damping bracket
+ndp_ridge_bracket.py keeps the initial CD/UOT matching, Jacobian and motion scale
+fixed and tests0.1,1,10 times the original damping. All108 central first-update
+records must exactly replay the attribution study, and all6 original baselines
+must replay. This probes initial endpoints, not the later refresh trajectory.
+ridge_bracket_report.py compares fitting error, task signs and accepted cap1
+moves. It reuses the verified joint study's GD/Adam controls at the same bound.
+A failed tangent/cap1 GD/Adam condition rejects a candidate; additional matched
+field controls check attribution. Passing this screen is insufficient: remaining
+policies/caps, equal-time controls, full trajectories and new scenes still apply.
+Lower residual at finite damping does not identify an irreducible range error.
+ mkdir -p paper_revision/ridge_bracket_20261018
+ python ndp_ridge_bracket.py
+ python ridge_bracket_report.py
