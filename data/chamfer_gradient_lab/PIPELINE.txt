@@ -455,3 +455,24 @@ and regularized affine readout are controls/building blocks, not novelty claims.
  mkdir -p paper_revision/fgr_head_20261018
  python ndp_head_mix_probe.py
  python ndp_head_mix_probe.py --report-only
+
+Head-preconditioned full-ridge solver screen
+pipeline/lifting.py optionally preconditions CG; its default unpreconditioned
+path is preserved. pipeline/head.py applies the inverse of the affine head kernel
+plus the SAME full-system damping through a small Cholesky factorization and the
+Woodbury identity. The full Jacobian, spectral estimate, ridge objective and
+parameter subspace remain unchanged. True residuals are recomputed at termination;
+recursive residuals or iteration counts alone cannot establish solve accuracy.
+The fgr_pcgmix direction uses the old force, full-CD-GD mixing and native controller.
+ndp_pcg_probe.py replays all 54 original endpoints, balances which production
+proposal is measured first, and verifies ordinary/full-ridge native controls
+against saved records. It records both solvers, normalized velocity discrepancies,
+finite acceptances and all old local gates. Its preliminary proposal timing is
+not the later two-repetition matched-time Adam audit. Faster convergence is an
+empirical question; preconditioning does not itself prove lower runtime, better
+task error, or a remedy for the previous full-trajectory failure.
+ndp_head_mix_probe.py supplies the common endpoint callback and gate/report code;
+its original head-only entry point and report remain unchanged by default.
+ mkdir -p paper_revision/head_preconditioner_20261018
+ python ndp_pcg_probe.py
+ python ndp_pcg_probe.py --report-only

@@ -18,13 +18,16 @@ def jacobian_products(output, params):
     return forward,transpose
 
 
-def cg(operator, rhs, rtol=1e-8, maxiter=128):
+def cg(operator, rhs, rtol=1e-8, maxiter=128, preconditioner=None):
     x = torch.zeros_like(rhs)
     r = rhs.detach().clone()
     direction = r.clone()
     rr, initial = (r*r).sum(), float(r.norm())
     if initial == 0:
         return x,dict(iterations=0,residual_norm=0.,relative_residual=0.,converged=True)
+    if preconditioner is not None:
+        direction=preconditioner(r);rr=(r*direction).sum()
+        if not torch.isfinite(rr) or rr<=0:raise RuntimeError('Invalid preconditioned residual product')
     iterations = 0
     for iterations in range(1,maxiter+1):
         product = operator(direction)
@@ -35,14 +38,18 @@ def cg(operator, rhs, rtol=1e-8, maxiter=128):
         x, r = x+step*direction, r-step*product
         next_rr = (r*r).sum()
         if float(next_rr.sqrt()) <= rtol*initial: break
-        direction = r+(next_rr/rr)*direction
+        z=r if preconditioner is None else preconditioner(r)
+        if preconditioner is not None:
+            next_rr=(r*z).sum()
+            if not torch.isfinite(next_rr) or next_rr<=0:raise RuntimeError('Invalid preconditioned residual product')
+        direction = z+(next_rr/rr)*direction
         rr = next_rr
     residual = float((rhs-operator(x)).norm())
     return x,dict(iterations=iterations,residual_norm=residual,
                   relative_residual=residual/initial,converged=residual <= rtol*initial)
 
 
-def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01, maxiter=128):
+def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01, maxiter=128, preconditioner_factory=None):
     """Return -J^T(K+lambda I)^-1 g and auditable numerical diagnostics."""
     calls = 0
 
@@ -62,7 +69,8 @@ def ridge_lift(forward, transpose, gradient, seed, damping_ratio=.01, maxiter=12
     damping = damping_ratio*spectral
     if damping <= 0 or not torch.isfinite(torch.tensor(damping)):
         raise RuntimeError('Invalid damping')
-    dual, info = cg(lambda z:kernel(z)+damping*z,gradient.detach(),maxiter=maxiter)
+    preconditioner=None if preconditioner_factory is None else preconditioner_factory(damping)
+    dual, info = cg(lambda z:kernel(z)+damping*z,gradient.detach(),maxiter=maxiter,preconditioner=preconditioner)
     delta = [-g for g in transpose(dual)]
     info.update(spectral_estimate=spectral,damping=damping,kernel_calls=calls)
     return delta,info

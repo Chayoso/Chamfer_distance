@@ -44,12 +44,13 @@ def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
     (OUT/'progress.json').write_text(base.json.dumps(dict(pair=pair,level=level))+'\n')
 
 
-def environment(pair,truth):
+def environment(pair,truth,callback=None,poses=None):
+    callback=compare if callback is None else callback;poses=POSES if poses is None else poses
     x=base.torch.as_tensor(native.load(pair)[0],device=truth.device,dtype=base.torch.float32)
-    pose=base.torch.as_tensor(POSES[pair]['transform'],device=x.device,dtype=base.torch.float64)
+    pose=base.torch.as_tensor(poses[pair]['transform'],device=x.device,dtype=base.torch.float64)
     def end(level,iteration,count,previous,value,opt,layer,inputs,q,cached,ids,mean):
         begin=base.tick(inputs);anchor=x[ids].double()@pose[:3,:3].T+pose[:3,3]-mean.double()
-        compare(pair,level,layer,opt,inputs,q,truth[ids]-mean,anchor,base.tick(inputs)-begin)
+        callback(pair,level,layer,opt,inputs,q,truth[ids]-mean,anchor,base.tick(inputs)-begin)
     return base.stopping_environment(lambda *args:None,end)[0]
 
 
@@ -60,7 +61,8 @@ def references():
     return d,f,states
 
 
-def report():
+def report(out=OUT,primary='fgr_headmix',raw='fgr_head'):
+    OUT=out;METHODS=('cd_gd','adam',raw,primary)
     d,f,_=references();states={(p,l) for p in base.PAIRS for l in range(9)}
     rows={name:read(OUT,name) for name in ('directions','finite','states','solvers')}
     assert base.json.loads((OUT/'integrity.json').read_text())['exact_replays']==list(base.PAIRS)
@@ -71,7 +73,7 @@ def report():
     coverage(rows['directions'],('pair','level','method'),{(*s,m) for s in states for m in METHODS})
     coverage(rows['finite'],('pair','level','method','policy','cap'),
         {(*s,m,p,c) for s in states for m in METHODS for p in ('raw','trust') for c in (1/16,.25,1.)})
-    assert all(r['converged'] and r['relative_residual']<=1e-8 and r['jvp_relative_error']<=1e-10 for r in rows['solvers'])
+    assert all(r['converged'] and r['relative_residual']<=1e-8 and r.get('jvp_relative_error',0)<=1e-10 for r in rows['solvers'])
     for r in rows['directions']:
         key=(r['pair'],r['level'],r['method'])
         if r['method'] in ('cd_gd','adam'):
@@ -93,9 +95,9 @@ def report():
             for cap in (0.,1/16,.25,1.):
                 for policy in (('raw',) if cap==0 else ('raw','trust')):
                     a=[d[(*k,baseline)]['risk_derivative'] if cap==0 else f[(*k,baseline,policy,cap)]['risk_change'] for k in keys]
-                    c=[d[(*k,'fgr_headmix')]['risk_derivative'] if cap==0 else f[(*k,'fgr_headmix','trust',cap)]['risk_change'] for k in keys]
+                    c=[d[(*k,primary)]['risk_derivative'] if cap==0 else f[(*k,primary,'trust',cap)]['risk_change'] for k in keys]
                     for eps in (1e-12,1e-10,1e-8):counts.append(dict(group=group,baseline=baseline,cap=cap,base_policy=policy,tolerance=eps,**net_counts(a,c,eps)))
-        for method in ('cd_gd','adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_head','fgr_headmix'):
+        for method in ('cd_gd','adam','cd_ridge','fgr_gdmix','fgr_ridgemix',raw,primary):
             chosen=[f[(*k,method,'trust',1.)] for k in keys]
             groups.append(dict(group=group,method=method,states=len(keys),
                 tangent_descents=sum(d[(*k,method)]['risk_derivative'] < -1e-12 for k in keys),
@@ -104,36 +106,37 @@ def report():
                 mean_mse_change=float(base.np.mean([r['risk_change'] for r in chosen])),
                 mean_epe_change=float(base.np.mean([r['epe_change'] for r in chosen])),
                 median_fraction=float(base.np.median([r['fraction'] for r in chosen]))))
-    primary=[r for r in counts if r['cap'] in (0,.25,1.) and r['tolerance']==1e-12]
-    assert len(primary)==40
-    error=max(r['mse_identity_error'] for r in rows['finite']);passed=all(r['net']>0 for r in primary) and error<1e-12
+    required=[r for r in counts if r['cap'] in (0,.25,1.) and r['tolerance']==1e-12]
+    assert len(required)==40
+    error=max(r['mse_identity_error'] for r in rows['finite']);passed=all(r['net']>0 for r in required) and error<1e-12
     result=dict(states=54,exact_original_replays=6,exact_pose_replays=6,exact_common_finite_rows=648,
         solver_max_relative_residual=max(r['relative_residual'] for r in rows['solvers']),
-        head_max_jvp_relative_error=max(r['jvp_relative_error'] for r in rows['solvers']),
-        native_positive_cells=sum(r['net']>0 for r in primary),native_required_cells=40,
+        head_max_jvp_relative_error=max((r['jvp_relative_error'] for r in rows['solvers'] if 'jvp_relative_error' in r),default=None),
+        native_positive_cells=sum(r['net']>0 for r in required),native_required_cells=40,
         numerical_gate=error<1e-12,max_mse_identity_error=error,advance_to_timing=passed,
-        adopted=False,new_scenes=0,candidate_full_fits=0,groups=groups,failed_cells=[r for r in primary if r['net']<=0])
+        adopted=False,new_scenes=0,candidate_full_fits=0,groups=groups,failed_cells=[r for r in required if r['net']<=0])
     for name,value in (('summary.json',result),('counts.json',counts)):
         (OUT/name).write_text(base.json.dumps(value,indent=2,allow_nan=False)+'\n')
     lines=['Same 54 correlated endpoints. Saved controls reused only after exact common native trials.']
     lines += [str(r) for r in groups]+['Gates: '+str({k:v for k,v in result.items() if k not in ('groups','failed_cells')})]
     lines += ['Failed cells:']+[str(r) for r in result['failed_cells']]
-    (OUT/'summary.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines));figure(groups)
+    (OUT/'summary.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines));figure(groups,out,primary,raw)
 
 
-def figure(groups):
+def figure(groups,out=OUT,primary='fgr_headmix',raw='fgr_head'):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     fig,axes=plt.subplots(1,2,figsize=(10,4))
-    names=('cd_gd','adam','fgr_ridgemix','fgr_head','fgr_headmix')
+    names=('cd_gd','adam','fgr_ridgemix',raw,primary)
     for ax,group in zip(axes,('4DMatch','HF')):
         selected=[next(r for r in groups if r['group']==group and r['method']==m) for m in names]
         ax.bar(range(5),[r['finite_descents'] for r in selected])
-        ax.set(xticks=range(5),xticklabels=('CD-GD','Adam','Full ridge mix','Raw head','Head mix'),title=group,
+        labels=('Raw head','Head mix') if primary=='fgr_headmix' else ('Raw PCG','PCG mix')
+        ax.set(xticks=range(5),xticklabels=('CD-GD','Adam','Full ridge mix',*labels),title=group,
             ylabel='Task-MSE descent states at cap 1',ylim=(0,39 if group=='4DMatch' else 20))
         ax.tick_params(axis='x',labelrotation=18)
-    fig.tight_layout();fig.savefig(OUT/'head_mix.png',dpi=160);plt.close(fig)
+    fig.tight_layout();fig.savefig(out/'head_mix.png',dpi=160);plt.close(fig)
 
 
 if __name__=='__main__':

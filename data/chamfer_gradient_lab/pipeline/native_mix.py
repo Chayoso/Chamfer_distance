@@ -8,11 +8,11 @@ from .lifting import jacobian_products, ridge_lift
 from .field_steps import scale_direction
 from .direction_mix import mix_fraction
 from .trust import select_step
-from .head import translation_lift
+from .head import translation_lift, head_preconditioner
 
 
 def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None):
-    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix'):
+    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix'):
         raise ValueError('Unknown production direction')
     begin=tick(inputs)
     native=layer(inputs)[0].detach();initial=float(cd(native,target))
@@ -29,7 +29,7 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
     needed={None:(('cd','gd'),('cd','ridge'),('fgr','gd'),('fgr','ridge')),
         'adam':(), 'cd_ridge':(('cd','ridge'),),
         'fgr_gdmix':(('cd','gd'),('fgr','gd')), 'fgr_ridgemix':(('cd','gd'),('fgr','ridge')),
-        'fgr_headmix':(('cd','gd'),('fgr','head'))}
+        'fgr_headmix':(('cd','gd'),('fgr','head')),'fgr_pcgmix':(('cd','gd'),('fgr','pcg'))}
     for field,transfer in needed[method]:
         begin=tick(inputs);force=forces[field]
         if transfer=='gd':raw=transpose(force)
@@ -42,7 +42,8 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
             if not solver['converged'] or solver['jvp_relative_error']>1e-10:
                 raise RuntimeError(f'Invalid affine-head solve: {solver}')
         else:
-            raw,solver=ridge_lift(forward,transpose,-force,seed,damping_ratio=.0001,maxiter=2048)
+            factory=(lambda damping:head_preconditioner(model,x,damping)) if transfer=='pcg' else None
+            raw,solver=ridge_lift(forward,transpose,-force,seed,damping_ratio=.0001,maxiter=2048,preconditioner_factory=factory)
             solvers[field]=solver
             if not solver['converged']:raise RuntimeError(f'Unconverged {field} solve: {solver}')
         delta,velocity=scale_direction(raw,forward,bound)
@@ -51,7 +52,7 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         if adam_delta is None:raise ValueError('An actual Adam delta is required')
         begin=tick(inputs);delta,velocity=scale_direction(adam_delta,forward,bound)
         result['adam']=dict(delta=delta,velocity=velocity,seconds=tick(inputs)-begin)
-    transfers={None:('gd','ridge'),'fgr_gdmix':('gd',),'fgr_ridgemix':('ridge',),'fgr_headmix':('head',)}
+    transfers={None:('gd','ridge'),'fgr_gdmix':('gd',),'fgr_ridgemix':('ridge',),'fgr_headmix':('head',),'fgr_pcgmix':('pcg',)}
     for transfer in transfers.get(method,()):
         c=result['cd_gd'];sc=float((gradient*c['velocity']).sum())
         begin=tick(inputs);a=result['fgr_'+transfer]

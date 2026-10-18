@@ -1,10 +1,12 @@
 """Compare implicit derivatives/solves with independent explicit dense answers."""
 import numpy as np
 import torch
+import pytest
 from pipeline.lifting import jacobian_products, cg, ridge_lift
 
 
-def test_nonlinear_jacobian_and_ridge_against_dense_solve():
+@pytest.mark.parametrize('preconditioned',[False,True])
+def test_nonlinear_jacobian_and_ridge_against_dense_solve(preconditioned):
     gen = torch.Generator().manual_seed(37)
     theta = torch.randn(7,generator=gen,dtype=torch.float64,requires_grad=True)
     a = torch.randn(9,7,generator=gen,dtype=theta.dtype)
@@ -19,7 +21,8 @@ def test_nonlinear_jacobian_and_ridge_against_dense_solve():
     torch.testing.assert_close(forward([d]),j@d,rtol=1e-12,atol=1e-12)
     torch.testing.assert_close(transpose(z)[0],j.T@z,rtol=1e-12,atol=1e-12)
     state = torch.get_rng_state().clone()
-    delta,info = ridge_lift(forward,transpose,z,83)
+    factory=(lambda damping:lambda v:v/((j*j).sum(1)+damping)) if preconditioned else None
+    delta,info = ridge_lift(forward,transpose,z,83,preconditioner_factory=factory)
     assert torch.equal(state,torch.get_rng_state()) and info['converged']
     exact = -torch.linalg.solve(j.T@j+info['damping']*torch.eye(7),j.T@z)
     torch.testing.assert_close(delta[0],exact,rtol=1e-6,atol=1e-8)
