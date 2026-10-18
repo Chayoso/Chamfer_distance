@@ -476,3 +476,18 @@ results may be supplied instead of regenerating baselines. Reports consume local
 TXT/JSON records and produce tables and PNG figures; none are bundled in Git.
 Each pre-fit storage check requires the lab below 800 MB, with a total working
 folder limit of 1 GB. Run directories are never silently reused.
+
+Focused transfer mechanism study
+transfer_mechanism.py verifies an exact two-point unsquared Chamfer example,
+separating ridge damping from a missing output direction. The spectral filter
+is standard; the example does not assert that OT fixes correspondence ambiguity.
+ndp_transfer_factorial.py reuses the endpoint probe with only CD/UOT fields and
+ridge ratio1e-4; the existing exact-field ratio1e-2 arm supplies paired controls.
+Both use identical observed motion scales, controllers, states and fixed seeds.
+transfer_factorial_report.py checks exact GD/Adam controls and original replays,
+reports each frozen contrast, and retains failed numerical/adoption criteria.
+No GT chooses a field, damping, state or step. These are diagnostic clones.
+  mkdir -p paper_revision/mechanism_20261018/weak
+  python transfer_mechanism.py
+  python ndp_transfer_factorial.py
+  python transfer_factorial_report.py
