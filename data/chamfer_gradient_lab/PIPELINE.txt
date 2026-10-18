@@ -390,3 +390,26 @@ diagnostic replays and extra evaluation time do not replace the original gates
 or deployment timings. This one-step counterfactual does not establish a better
 future trajectory or independent generalization.
  python trajectory_task_audit.py
+
+Single-intervention horizon diagnosis
+pipeline/trajectory_mix.py accepts a fixed set of intervention levels; the default
+still corrects all nine levels. pipeline/horizon.py only observes a run: it records
+every sampled forward, training task error, and full/held errors at boundaries.
+Full-prefix queries bypass the input-observation hooks so they cannot change live
+training inputs. Tests change the evaluation truth while requiring identical
+selected updates, native outputs and RNG state.
+ndp_horizon_probe.py compares an intervention at level0 or8, step49, with an
+explicit ordinary-Adam branch on each of six reused pairs (24 fits). Only one
+update is replaced; every later update is plain Adam. Initial weights, sample IDs,
+pre-intervention weights/moments and every pre-intervention observation must match
+exactly. All twelve plain branches replay the saved fixed-budget baseline.
+horizon_report.py reports immediate and terminal effects and the first subsequent
+sign reversal of the task benefit. Training MSE is recorded at every forward;
+held/full errors are observed before/after intervention and at level boundaries.
+These evaluation-only, instrumented timings are not deployment-cost estimates.
+Early and late interventions start from different states: compare each with its
+own matched branch. No schedule is selected with GT, and this diagnostic study
+cannot replace failed adoption gates or establish new-scene generalization.
+ mkdir -p paper_revision/trajectory_horizon_20261018
+ python ndp_horizon_probe.py
+ python horizon_report.py

@@ -5,7 +5,7 @@ from .optim import fixed_official
 from .native_mix import directions, native_trials
 
 
-def trajectory_factory(kind,records,pair,pose=None):
+def trajectory_factory(kind,records,pair,pose=None,levels=None):
     if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix'):
         raise ValueError(kind)
     env=fixed_official();build=env['Deformation_Pyramid'];optimize=env['optimize_deformation_pyramid']
@@ -24,6 +24,8 @@ def trajectory_factory(kind,records,pair,pose=None):
     def run(instance):
         if instance.config.budget!=[50]*instance.config.m:
             raise ValueError('The frozen intervention schedule requires50 updates per level')
+        if levels is not None and any(i not in range(instance.config.m) for i in levels):
+            raise ValueError('Intervention levels must belong to the pyramid')
         state['instance']=instance;original=env['compute_truncated_chamfer_distance']
         def observed(p,q,**kwargs):
             level=next(i for i,m in enumerate(state['net'].pyramid) if next(m.parameters()).requires_grad)
@@ -35,7 +37,7 @@ def trajectory_factory(kind,records,pair,pose=None):
     class ControlledAdam(torch.optim.Adam):
         def step(self,closure=None):
             level,step=state['level'],state['step'];layer=state['net'].pyramid[level]
-            if kind=='adam' or step!=49:
+            if kind=='adam' or step!=49 or (levels is not None and level not in levels):
                 value=super().step(closure)
                 records.append(dict(level=level,step=step,controlled=False,
                     moment_step=int(self.state[next(layer.parameters())]['step'])))
