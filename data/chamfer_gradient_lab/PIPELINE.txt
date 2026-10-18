@@ -413,3 +413,25 @@ cannot replace failed adoption gates or establish new-scene generalization.
  mkdir -p paper_revision/trajectory_horizon_20261018
  python ndp_horizon_probe.py
  python horizon_report.py
+
+Deformation and point-gradient trajectory measurements
+ndp_projection_probe.py replays both early-intervention branches on all six pairs
+without changing any update. pipeline/projection.py observes native point-CD
+gradients and nearest-neighbor assignments, retaining the normal backward graph.
+Baseline point/gradient/assignment snapshots stay in RAM for one pair; no arrays
+or parameter checkpoints are saved. At each later forward the probe measures
+the paired deformation's signed projection on its initial deviation, orthogonal
+growth, gradient alignment and changed forward/reverse assignment fractions.
+Both target samples and the complete previous output/update/observation records
+must replay exactly. Zero-gradient cases remain explicit. Only after replay are
+observed quantities joined with the saved task gaps. Initial-direction retention
+must not be confused with task improvement or with the cause of a reversal.
+The report verifies the orthogonal-decomposition identity and shows every pair.
+It also reconstructs the squared-risk linear and positive quadratic terms from
+saved task gaps and paired displacement norms. This post-hoc algebra is not an
+independent GT-dot-product measurement and never influences the replayed updates.
+This is a diagnostic extension of the same paths, not independent data, a new
+acceptance gate, a deployment-cost measurement or a controller selected with GT.
+ mkdir -p paper_revision/trajectory_projection_20261018
+ python ndp_projection_probe.py
+ python ndp_projection_probe.py --report-only
