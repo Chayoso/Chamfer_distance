@@ -349,6 +349,21 @@ exact_fields_report.py additionally verifies unchanged controls and estimator
 effects. Earlier failed adoption gates remain intact; no native candidate or
 new-scene evaluation has been justified by this field comparison.
 
+field_selection_report.py then applies the existing CD-slope, CD-trial and
+eligible-ray rules to the exact-field records. It compares NN-only, NN plus
+centroid, and full libraries, saving 486 choices before GT scoring. The selector
+receives no GT or state identity; CD-ridge joins GD/Adam as a declared baseline.
+Historical callers retain their previous default baseline set. All three rules
+fail the frozen screen, including attribution against the same rule without
+MMD/OT. This is retrospective development analysis, not a new native algorithm.
+The GT-only finite oracle covers 29/36 4D states with NN directions and 36/36
+after adding only centroid directions; adding MMD/OT does not increase that
+coverage. In HF it changes 14/18 to 15/18. Oracle magnitudes can still differ;
+these counts neither establish a deployable selector nor a universal upper bound.
+Ideal point transfer also fails to make any fixed non-CD field beat equally
+ideal CD in both families. Better fitting alone is therefore not a demonstrated
+remedy for this fixed field library.
+
 Code layout
 -----------
 pipeline/model.py       Pinned upstream NDP definition adapter and configuration.
@@ -378,6 +393,7 @@ damping_report.py      Ridge-path residual bounds and unchanged adoption gates.
 stopping_report.py     Baseline stopping, continuation, and GT trajectory audit.
 fields_report.py       Endpoint field, transfer and conservative screening audit.
 exact_fields_report.py Exact-kernel comparison and unchanged-control verification.
+field_selection_report.py Fixed selectors, library attribution and GT-only bounds.
 tests/                 Mathematical, numerical, controller, and reporting tests.
 tests/fixtures/         Frozen source fixture, independent of result directories.
 scripts/               Pinned model retrieval and six-pair baseline generation.
@@ -449,6 +465,7 @@ With those assets and an idle allocated CUDA GPU:
   mkdir -p paper_revision/fields_20261018/exact
   python ndp_exact_field_probe.py
   python exact_fields_report.py
+  python field_selection_report.py
 
 The feature report requires the preceding capacity controls; the weighted report
 also checks the preceding feature and budget controls. The descriptor report

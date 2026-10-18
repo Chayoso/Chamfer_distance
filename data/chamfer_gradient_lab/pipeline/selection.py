@@ -16,7 +16,7 @@ def observed(direction,trial,transfer=None):
         ray_error=None if transfer is None else transfer['barycentric_ray_error'])
 
 
-def select(records,rule):
+def select(records,rule,baselines=BASELINES):
     """Return a method name or None (identity); ties use the method name."""
     if rule not in RULES:raise ValueError('Unknown selection rule')
     names=[r.get('method') for r in records]
@@ -34,7 +34,7 @@ def select(records,rule):
         eligible=[r for r in records if r['accepted'] and r['linearization_error']<=.1 and r['cd_change']<0]
         score='cd_change'
         if rule=='ray_cd':
-            proposals=[r for r in eligible if r['ray_error'] is not None and r['method'] not in BASELINES]
+            proposals=[r for r in eligible if r['ray_error'] is not None and r['method'] not in baselines]
             if proposals:eligible=proposals;score='ray_error'
-            else:eligible=[r for r in eligible if r['method'] in BASELINES]
+            else:eligible=[r for r in eligible if r['method'] in baselines]
     return min(eligible,key=lambda r:(r[score],r['method']))['method'] if eligible else None
