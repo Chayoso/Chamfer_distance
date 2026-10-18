@@ -30,3 +30,25 @@ def test_native_direction_builder_preserves_observed_progress_constraint():
     for method in ('fgr_gdmix','fgr_ridgemix'):
         assert float((g*d[method]['velocity']).sum())<=.5*sc+1e-12
         assert abs(float(d[method]['velocity'].norm())-result['bound'])<1e-10
+
+
+def test_restricted_direction_and_single_cap_match_diagnostic_path(monkeypatch):
+    import pipeline.native_mix as native
+    model=Translation();x=torch.tensor([[0.,0,0],[3.,0,0],[0.,3,0]]);q=x+.1
+    anchor=x.double()+torch.tensor([.4,-.2,.1]);full=directions(model,x,q,anchor,19)
+    calls=[];solve=native.ridge_lift
+    def counted(*args,**kwargs):
+        calls.append(1);return solve(*args,**kwargs)
+    monkeypatch.setattr(native,'ridge_lift',counted)
+    for method,expected_calls in [('cd_ridge',1),('fgr_gdmix',0),('fgr_ridgemix',1)]:
+        calls.clear();limited=directions(model,x,q,anchor,19,method=method)
+        assert len(calls)==expected_calls
+        for a,b in zip(limited['directions'][method]['delta'],full['directions'][method]['delta']):
+            torch.testing.assert_close(a,b,rtol=0,atol=0)
+        a=limited['directions'][method]
+        args=(model,x,q,limited['native'],limited['initial'],a['delta'],a['velocity'],limited['gradient'])
+        all_caps=list(native_trials(*args));single=list(native_trials(*args,caps=(1.,)))
+        assert len(single)==2
+        for old,new in zip(all_caps[-2:],single):
+            assert {k:v for k,v in old[0].items() if k!='controller_seconds'}=={k:v for k,v in new[0].items() if k!='controller_seconds'}
+            assert torch.equal(old[1],new[1])

@@ -348,3 +348,45 @@ This stage requires the precise mixed-study records and frozen FGR poses.
  mkdir -p paper_revision/native_mix_20261018
  python ndp_native_mix_probe.py
  python native_mix_report.py
+
+Own-history fixed-budget trajectories
+trajectory_preflight.py verifies exact restricted/full direction and native-trial
+parity for four methods on six existing final-level states, with exact baseline
+replays. pipeline/native_mix.py can compute only the deployed method and cap1;
+unused diagnostic solves/caps are excluded from deployment cost. Trial clones
+clear observation hooks so they cannot overwrite the live optimizer's inputs.
+pipeline/trajectory_mix.py replaces update49 at each of nine levels; the other
+441 updates are ordinary Adam. Each arm advances its own Adam moments once per
+attempt, restores the old parameters before proposing a controlled alternative,
+and commits exactly the accepted native float32 trial. A rejection preserves
+parameters while moments remain advanced. No GT reaches this update interface.
+The frozen FGR anchor uses original sampled source IDs, recovered without global
+RNG consumption, and the original target centering. The fixed_official final
+post-update forward supplies the next level's input.
+ndp_mix_trajectory.py compares plain Adam, controlled Adam, CD-ridge, FGR-GD mix
+and FGR-ridge mix on six reused development pairs, twice. Each fit has450
+attempted updates and459 training loss calls. Each FGR fit recomputes and verifies
+its fixed observed pose and charges its full preparation cost once. Cyclic arm
+order, initialization, eta=.5, damping1e-4 and nine interventions are frozen.
+trajectory_mix_report.py requires >=2% family mean held-EPE improvement versus
+BOTH Adam controls, no pair >5% worse than plain Adam, nonincreasing family
+training-MSE AUC versus both controls, median paired total time<=2x plain Adam,
+and exact numerical/repetition checks. Every gate applies in each repetition.
+AUC uses each level's steps0,25,50 trapezoid and then averages the nine levels.
+Local acceptance does not imply final task improvement. A failure prevents new
+scene evaluation. Repeated executions of reused pairs are not independent data.
+This study requires fixed-budget replication_4d/replication_hf references and
+the preceding successful native/time audit; it is separate from500-stop states.
+ mkdir -p paper_revision/trajectory_mix_20261018
+ python trajectory_preflight.py
+ python ndp_mix_trajectory.py
+ python trajectory_mix_report.py
+If the full-trajectory gate fails, trajectory_task_audit.py diagnoses all54
+primary interventions without tuning: original-source force and lifted task
+slopes, accepted native task change, and the actual own-history Adam delta at
+the same state. GT is confined to external observers after direction/selection;
+all final metrics, traces and2700 update records must replay exactly. Its six
+diagnostic replays and extra evaluation time do not replace the original gates
+or deployment timings. This one-step counterfactual does not establish a better
+future trajectory or independent generalization.
+ python trajectory_task_audit.py
