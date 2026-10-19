@@ -496,3 +496,26 @@ improvement; the earlier failed full-trajectory result remains unresolved.
  mkdir -p paper_revision/pcg_timing_20261018
  python ndp_pcg_timing.py
  python pcg_timing_report.py
+
+Cost-calibrated full trajectories with strong early-stopping controls
+The frozen dense_pcg calibration uses only saved costs and chooses16 updates per
+stage with events at7 and15. The planning target is median1.8x full-Adam time;
+the actual total-time gate stays2x. This is an approximate allocation, not a cost
+upper bound. pipeline/trajectory_mix.py accepts an explicit common stage length
+and event steps; its default50/end-only behavior is unchanged. It also supports
+the already validated fgr_pcgmix direction. pipeline/runner.py accepts explicit
+evaluation trace steps; changing those steps or GT must leave updates/RNG intact.
+ndp_dense_trajectory.py compares full plain/controlled Adam9x50, short
+plain/controlled Adam9x16, short end-only PCG mix, and short twice-per-stage
+CD-ridge/FGR-GD mix/primary FGR-PCG mix. These eight arms run on the same six
+pairs twice. All full controls replay their old results; all repeated arms
+must match non-timing records. Every FGR fit charges preparation once.
+dense_trajectory_report.py retains the old full EPE/worst-pair/AUC/time gates
+and additionally requires EPE/AUC superiority to both short Adam controls.
+Normalized AUC uses0,midpoint,end in every stage; it is not an equal-wall-time
+integral. End-only/GD-mix/CD-ridge comparisons address attribution separately.
+No new scenes follow a failed full gate. This study requires the frozen cost
+calibration and a passing two-repeat PCG audit; defaults must replay first.
+ python ndp_dense_trajectory.py --preflight
+ python ndp_dense_trajectory.py
+ python dense_trajectory_report.py

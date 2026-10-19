@@ -1,13 +1,16 @@
-"""Nine controlled replacements in a fixed50-update-per-level native trajectory."""
+"""Controlled native replacements; the default remains nine end-only events."""
 from types import SimpleNamespace
 from .model import torch
 from .optim import fixed_official
 from .native_mix import directions, native_trials
 
 
-def trajectory_factory(kind,records,pair,pose=None,levels=None):
-    if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix'):
+def trajectory_factory(kind,records,pair,pose=None,levels=None,updates_per_level=50,event_steps=None):
+    if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_pcgmix'):
         raise ValueError(kind)
+    events=(updates_per_level-1,) if event_steps is None else tuple(event_steps)
+    if updates_per_level<=0 or len(set(events))!=len(events) or any(s not in range(updates_per_level) for s in events):
+        raise ValueError('Provide unique event steps within the fixed stage budget')
     env=fixed_official();build=env['Deformation_Pyramid'];optimize=env['optimize_deformation_pyramid']
     state={}
     def constructor(**kwargs):
@@ -22,8 +25,8 @@ def trajectory_factory(kind,records,pair,pose=None,levels=None):
             layer.register_forward_pre_hook(lambda module,inputs,i=level:state.update({i:inputs[0].detach()}))
         return net
     def run(instance):
-        if instance.config.budget!=[50]*instance.config.m:
-            raise ValueError('The frozen intervention schedule requires50 updates per level')
+        if instance.config.budget!=[updates_per_level]*instance.config.m:
+            raise ValueError('Stage budgets must match the declared intervention schedule')
         if levels is not None and any(i not in range(instance.config.m) for i in levels):
             raise ValueError('Intervention levels must belong to the pyramid')
         state['instance']=instance;original=env['compute_truncated_chamfer_distance']
@@ -37,7 +40,7 @@ def trajectory_factory(kind,records,pair,pose=None,levels=None):
     class ControlledAdam(torch.optim.Adam):
         def step(self,closure=None):
             level,step=state['level'],state['step'];layer=state['net'].pyramid[level]
-            if kind=='adam' or step!=49 or (levels is not None and level not in levels):
+            if kind=='adam' or step not in events or (levels is not None and level not in levels):
                 value=super().step(closure)
                 records.append(dict(level=level,step=step,controlled=False,
                     moment_step=int(self.state[next(layer.parameters())]['step'])))

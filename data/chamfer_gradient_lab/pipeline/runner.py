@@ -26,7 +26,7 @@ def metrics(pred, source, truth, overlap, sample_ids):
 
 
 def fit(pair, seed, method, weight, folder, *, loader=None, loss_fn=None,
-        cfg=None, factory=None):
+        cfg=None, factory=None, trace_steps=None):
     """Explicit dependencies for new runs; defaults preserve historical callers."""
     loader = data if loader is None else loader
     loss_fn = objective if loss_fn is None else loss_fn
@@ -51,7 +51,7 @@ def fit(pair, seed, method, weight, folder, *, loader=None, loss_fn=None,
         step = state.get('step', -1)+1 if state.get('level') == level else 0
         state.update(level=level, step=step)
         state.setdefault('calls_by_level', [0]*cfg.m)[level] += 1
-        if step%25 == 0:
+        if (step%25==0 if trace_steps is None else step in trace_steps):
             gt = truth[state['ids']]-y.mean(0)
             risk = (p-gt).square().sum(1).mean()
             params = list(state['net'].pyramid[level].parameters())
