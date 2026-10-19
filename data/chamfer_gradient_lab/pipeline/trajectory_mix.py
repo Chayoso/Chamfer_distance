@@ -5,7 +5,7 @@ from .optim import fixed_official
 from .native_mix import directions, native_trials
 
 
-def trajectory_factory(kind,records,pair,pose=None,levels=None,updates_per_level=50,event_steps=None):
+def trajectory_factory(kind,records,pair,pose=None,levels=None,updates_per_level=50,event_steps=None,event_observer=None):
     if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_pcgmix'):
         raise ValueError(kind)
     events=(updates_per_level-1,) if event_steps is None else tuple(event_steps)
@@ -73,6 +73,7 @@ def trajectory_factory(kind,records,pair,pose=None,levels=None,updates_per_level
                 records.append(record)
                 raise  # Preserve the failed record and stop; never substitute another update.
             records.append(record)
+            if event_observer is not None:event_observer(record,result,state.get('anchor'),applied)
             return value
     env.update(Deformation_Pyramid=constructor,optimize_deformation_pyramid=run,
                optim=SimpleNamespace(Adam=ControlledAdam))

@@ -555,3 +555,21 @@ No new candidate, adoption or independent-scene claim follows from this audit.
  mkdir -p paper_revision/continuation_geometry_20261018
  python ndp_continuation_geometry.py
  python continuation_geometry_report.py
+
+Global event force/transfer/mixing diagnostic
+pipeline/trajectory_mix.py optionally calls an observer only after committing
+the native replacement and appending its record; the default path is unchanged.
+pipeline/event_chain.py reads evaluation truth at that point and observes the
+already computed raw-anchor, full-PCG, CD-reference and mixed velocities plus
+the actual motion. It records both double/native task-gradient products and
+reconstructs the normalized mixture with an absolute1e-12 numerical check.
+GT never selects a direction or step. Changed-truth and observation regressions
+must preserve outputs, updates, prefix hashes and RNG. ndp_global_event_chain.py
+replays all six restored paths and matches108 finite events against the previous
+movement audit. global_event_chain_report.py reports both gradient bases, all
+sign patterns, near-zero values and per-pair event tables. A first non-descent
+label is an accounting description, not a unique causal explanation. No solver,
+mixing weight, controller, schedule or adoption threshold changes in this audit.
+ mkdir -p paper_revision/global_event_chain_20261018
+ python ndp_global_event_chain.py
+ python global_event_chain_report.py
