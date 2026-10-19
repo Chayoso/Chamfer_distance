@@ -537,3 +537,21 @@ task accuracy or satisfy the time cap. A failed full criterion forbids new scene
  mkdir -p paper_revision/ordinary_restore_20261018
  python ndp_ordinary_restore.py
  python ordinary_restore_report.py
+
+Actual continuation movement diagnostic
+ndp_continuation_geometry.py replays the six verified restored trajectories
+without changing any update. pipeline/update_geometry.py observes actual native
+motions, point-space CD directional products, task and fixed-FGR-anchor MSE
+linear/quadratic terms, and full/held errors at stage observations16 and50.
+The GT observation cannot affect proposals or acceptance; regressions compare
+observed/unobserved paths and changed evaluation truth. pipeline/prefix.py can
+wrap another loss observer while retaining its original default objective.
+Every saved result/update/trace and initial prefix must replay exactly. MSE
+identities and within-stage telescoping use an absolute1e-12 check in float64.
+continuation_geometry_report.py separates early ordinary updates, each global
+event and late ordinary updates. A fixed zero-anchor-change split is descriptive,
+with near-zero counts reported; it is not a fitted selector or a guarded run.
+No new candidate, adoption or independent-scene claim follows from this audit.
+ mkdir -p paper_revision/continuation_geometry_20261018
+ python ndp_continuation_geometry.py
+ python continuation_geometry_report.py

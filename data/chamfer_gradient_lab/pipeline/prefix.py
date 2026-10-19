@@ -4,7 +4,7 @@ from .losses import objective
 from .horizon import digest
 
 
-def prefix_observer(base_factory,metadata,calls=17):
+def prefix_observer(base_factory,metadata,calls=17,loss_fn=objective):
     state={};metadata['outputs']=[]
     def factory():
         env=base_factory();build=env['Deformation_Pyramid'];optimize=env['optimize_deformation_pyramid']
@@ -21,7 +21,7 @@ def prefix_observer(base_factory,metadata,calls=17):
         env.update(Deformation_Pyramid=constructor,optimize_deformation_pyramid=run)
         return env
     def loss(p,q,*args):
-        value=objective(p,q,*args)
+        value=loss_fn(p,q,*args)
         if len(metadata['outputs'])<calls:
             metadata['outputs'].append(dict(prediction=digest([p]),target=digest([q]),rng=digest([torch.get_rng_state()])))
         return value
