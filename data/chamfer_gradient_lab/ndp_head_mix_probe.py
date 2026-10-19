@@ -133,6 +133,7 @@ def figure(groups,out=OUT,primary='fgr_headmix',raw='fgr_head'):
         selected=[next(r for r in groups if r['group']==group and r['method']==m) for m in names]
         ax.bar(range(5),[r['finite_descents'] for r in selected])
         labels=('Raw head','Head mix') if primary=='fgr_headmix' else ('Raw PCG','PCG mix')
+        if primary=='fgr_normmix':labels=('Raw PCG','Norm. mix')
         ax.set(xticks=range(5),xticklabels=('CD-GD','Adam','Full ridge mix',*labels),title=group,
             ylabel='Task-MSE descent states at cap 1',ylim=(0,39 if group=='4DMatch' else 20))
         ax.tick_params(axis='x',labelrotation=18)

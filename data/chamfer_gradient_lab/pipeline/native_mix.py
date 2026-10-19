@@ -6,13 +6,13 @@ from .continuation import tick
 from .fields import geometry_scales
 from .lifting import jacobian_products, ridge_lift
 from .field_steps import scale_direction
-from .direction_mix import mix_fraction
+from .direction_mix import mix_fraction, normalized_mix_fraction
 from .trust import select_step
 from .head import translation_lift, head_preconditioner
 
 
 def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None):
-    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix'):
+    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix','fgr_normmix'):
         raise ValueError('Unknown production direction')
     begin=tick(inputs)
     native=layer(inputs)[0].detach();initial=float(cd(native,target))
@@ -29,7 +29,8 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
     needed={None:(('cd','gd'),('cd','ridge'),('fgr','gd'),('fgr','ridge')),
         'adam':(), 'cd_ridge':(('cd','ridge'),),
         'fgr_gdmix':(('cd','gd'),('fgr','gd')), 'fgr_ridgemix':(('cd','gd'),('fgr','ridge')),
-        'fgr_headmix':(('cd','gd'),('fgr','head')),'fgr_pcgmix':(('cd','gd'),('fgr','pcg'))}
+        'fgr_headmix':(('cd','gd'),('fgr','head')),'fgr_pcgmix':(('cd','gd'),('fgr','pcg')),
+        'fgr_normmix':(('cd','gd'),('fgr','pcg'))}
     for field,transfer in needed[method]:
         begin=tick(inputs);force=forces[field]
         if transfer=='gd':raw=transpose(force)
@@ -52,14 +53,20 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         if adam_delta is None:raise ValueError('An actual Adam delta is required')
         begin=tick(inputs);delta,velocity=scale_direction(adam_delta,forward,bound)
         result['adam']=dict(delta=delta,velocity=velocity,seconds=tick(inputs)-begin)
-    transfers={None:('gd','ridge'),'fgr_gdmix':('gd',),'fgr_ridgemix':('ridge',),'fgr_headmix':('head',),'fgr_pcgmix':('pcg',)}
+    transfers={None:('gd','ridge'),'fgr_gdmix':('gd',),'fgr_ridgemix':('ridge',),'fgr_headmix':('head',),'fgr_pcgmix':('pcg',),'fgr_normmix':('pcg',)}
     for transfer in transfers.get(method,()):
         c=result['cd_gd'];sc=float((gradient*c['velocity']).sum())
         begin=tick(inputs);a=result['fgr_'+transfer]
         sa=float((gradient*a['velocity']).sum());beta=mix_fraction(sa,sc)
+        if method=='fgr_normmix':
+            cosine=float((a['velocity']*c['velocity']).sum())/(bound*bound)
+            beta=normalized_mix_fraction(sa,sc,cosine)
         raw=[(1-beta)*v+beta*w for v,w in zip(a['delta'],c['delta'])]
         delta,velocity=scale_direction(raw,forward,bound)
-        result['fgr_'+transfer+'mix']=dict(delta=delta,velocity=velocity,beta=beta,
+        if method=='fgr_normmix' and float((gradient*velocity).sum())>.5*sc+1e-12:
+            raise RuntimeError('Normalized mixture lost its observed descent certificate')
+        name='fgr_normmix' if method=='fgr_normmix' else 'fgr_'+transfer+'mix'
+        result[name]=dict(delta=delta,velocity=velocity,beta=beta,
             seconds=tick(inputs)-begin+a['seconds']+c['seconds'])
     return dict(native=native.double(),initial=initial,start=start,gradient=gradient,bound=bound,
                 setup_seconds=setup,directions=result,solvers=solvers)

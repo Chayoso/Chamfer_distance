@@ -13,6 +13,23 @@ def mix_fraction(proposed_slope, descent_slope, retain=.5):
     return (proposed_slope-retain*descent_slope)/(proposed_slope-descent_slope)
 
 
+def normalized_mix_fraction(proposed_slope, descent_slope, cosine, retain=.5):
+    """Least mixing after output normalization; degenerate rays keep the old rule."""
+    upper=mix_fraction(proposed_slope,descent_slope,retain)
+    if not math.isfinite(cosine) or abs(cosine)>1+1e-12:
+        raise ValueError('A finite ray cosine in[-1,1] is required')
+    if upper==0 or abs(cosine)>=1-1e-12:
+        return upper
+    lower=0.
+    for _ in range(64):
+        mid=(lower+upper)/2
+        ratio=math.sqrt((1-2*mid)**2+2*(1+cosine)*mid*(1-mid))
+        slope=((1-mid)*proposed_slope+mid*descent_slope)/ratio
+        if slope<=retain*descent_slope:upper=mid
+        else:lower=mid
+    return upper
+
+
 def normalized_slope_interval(task_a, task_c, beta, cd_a, cd_c, bound, cd_norm):
     """Bounds after norm-b normalization, assuming both input rays have norm b."""
     if not 0 <= beta <= 1 or bound <= 0 or cd_norm <= 0:

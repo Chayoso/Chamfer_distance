@@ -573,3 +573,18 @@ mixing weight, controller, schedule or adoption threshold changes in this audit.
  mkdir -p paper_revision/global_event_chain_20261018
  python ndp_global_event_chain.py
  python global_event_chain_report.py
+
+Normalization-aware mixture screen
+pipeline/direction_mix.py optionally solves the observed normalized-direction
+constraint by64 scalar bisections. The half-reference descent requirement is
+unchanged. Nearly parallel/antipodal rays retain the existing linear rule.
+pipeline/native_mix.py exposes fgr_normmix: the full-PCG force, seed, ridge,
+motion norm and native controller are unchanged; only the mixture fraction
+differs. No task labels enter this function. The old default remains intact.
+ndp_normalized_mix_probe.py evaluates all54 original endpoints and checks old
+PCG/CD/Adam native controls exactly. It reuses the original40 local/finite cells
+and records per-pair magnitudes. Any failed cell stops expansion to timing or
+full trajectories. Development-state diagnostics do not establish adoption.
+ mkdir -p paper_revision/normalized_mix_20261018
+ python ndp_normalized_mix_probe.py
+ python ndp_normalized_mix_probe.py --report-only
