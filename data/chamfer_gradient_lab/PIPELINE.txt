@@ -1,590 +1,176 @@
 CHAMFER DIRECTION RESEARCH PIPELINE
 
-Purpose and status
-This code separates correspondence quality, neural direction transfer, and step
-acceptance in Chamfer-based registration. No candidate has passed all adoption
-gates; Chamfer + Adam remains the baseline. The analytic examples establish
-possible failure mechanisms, not a successful general registration method.
-Six repeatedly examined development pairs contribute54 correlated endpoints.
-They are not54 independent scenes or an untouched test set. All original
-endpoints still admit additional Chamfer improvement under Adam continuation;
-there is no demonstrated local-minimum escape. Lower Chamfer can raise GT error.
+Purpose and current scope
+Study where a global correspondence direction loses usefulness: its point field,
+its transfer through a neural deformation model, observed-loss mixing, or actual
+nonlinear application. Chamfer + Adam remains the baseline. No candidate has
+passed the complete adoption protocol. The latest normalization-aware mixture
+is a local screen candidate, not an adopted full registration pipeline.
 
-Data and baseline
-Observed source X and target Y enter optimization. Evaluation GT gives the true
-position of each source point. It never enters proposals, transfer, normalization
-or finite acceptance. GT does enter offline research evaluation and adoption
-screening, so these development pairs are not held-out validation.
-4DMatch GT is reconstructed from flow, rotation and translation. The prepared
-HF-derived3DMatch set uses real fragments with a controlled30-degree rotation
-and translation of0.1 source radius; stored GT is the unperturbed source fragment,
-not the official pose benchmark's ground truth. Preserve stored normalization.
+Data flow
+ Observed source X and target Y
+   -> NDP state and its own Adam history
+   -> observed global correspondence / point displacement proposal
+   -> regularized neural parameter transfer using JVP/VJP
+   -> output-motion normalization and observed-CD direction mixing
+   -> native float32 backtracking and motion-consistency check
+   -> commit update
+   -> evaluate with GT, without feeding GT back into the decision.
 
-The native loss is symmetric UNSQUARED Euclidean Chamfer:
- C(Z,Y)=mean_i min_j ||z_i-y_j||+mean_j min_i ||z_i-y_j||.
-The baseline separately centers each cloud, samples at most2,000 points and uses
-nine NDP levels, three hidden layers of width128, frequency start k0=-8,
-axis-angle SE(3) motion, and per-level Adam with learning rate.01.
-The historical fixed-budget loop performs50 updates and a fresh endpoint
-calculation per level. It is a budget adaptation, not a full NDP reproduction.
-The original loop permits500 iterations and early stopping; its small-change
-counter accumulates15 events, which need not be consecutive. The stopping audit
-separates that original loop, a full-ceiling loop with cached stage handoffs,
-and500 fixed-budget updates with fresh handoffs. Instrumented original traces
-must exactly reproduce uninstrumented references, excluding elapsed time.
-Native parameters are float32; cloned direction calculations are float64.
+Optimization and evaluation data
+The observed target cloud is available to optimization. Evaluation GT is the true
+position of each source point; it never chooses a proposal, ridge, beta, step or
+Adam checkpoint. GT is used for offline research screening, so repeatedly used
+development examples are not an untouched validation set.
+4DMatch uses flow, rotation and translation to reconstruct GT. The HF-derived
+3DMatch data use real fragments with controlled 30-degree rotation and translation
+of 0.1 source radius. That synthetic perturbation GT is not the official pose
+benchmark's ground truth. Preserve the prepared normalization and point IDs.
+Prepared NPZ assets, not redistributed in Git:
+ assets/4dmatch_replication/{100,101,124,125}.npz
+   s_pc,t_pc,s2t_flow,rot,trans,correspondences
+ assets/hf_3dmatch/{200,201}.npz
+   source,target,truth,overlap,scale
 
-Pipeline
- observed X,Y -> baseline NDP -> clone endpoint -> point field f
-  -> parameter update delta -> observed motion normalization
-  -> finite objective/linearization checks -> evaluation against GT.
-Clones leave the original trajectory and Adam moments unchanged. Earlier probes
-use levels0,4,8 and updates0,25,49. The current field/mechanism/joint studies
-instead use all nine ORIGINAL stopping endpoints of each reused pair.
+Native baseline
+The observed loss is symmetric UNSQUARED Euclidean Chamfer:
+ C(Z,Y)=mean_i min_j ||z_i-y_j|| + mean_j min_i ||z_i-y_j||.
+Each cloud is centered separately; at most 2,000 points are sampled. NDP uses
+nine levels, depth 3, width 128, initial frequency k0=-8, axis-angle SE(3) motion
+and per-level Adam with learning rate .01. Native parameters are float32;
+direction calculations on cloned models use float64.
+The original loop allows 500 iterations and an accumulating 15-event small-change
+counter. Fixed-budget experiments instead use fresh stage endpoints and declared
+budgets such as 50 updates per level. These are separate baseline definitions.
+Exact replay excludes elapsed time and requires the original environment/data.
 
-Correspondence
-For a transport plan pi, define row mass r_i=sum_j pi_ij and force
- f_i=sum_j pi_ij(y_j-z_i).
-The barycentric displacement f_i/r_i is distinct from that force. Zero-mass
-rows have zero force. Transport uses half squared Euclidean costs, observed
-geometric entropy scale epsilon, and relaxed marginal penalty tau=2epsilon.
-Soft, semi-relaxed, unbalanced and balanced models are controls, not novel OT.
-Actual transport residuals must pass; balanced --newton enables refinement.
-FPFH controls use33-dimensional normalized descriptors of CURRENT observed
-clouds: normals radius2h/max30 neighbors, features radius5h/max100 neighbors,
-where h is pooled within-cloud mean nearest-neighbor spacing. The mixed cost
-adds epsilon*0.5*||a_i-b_j||^2/.1^2. Feature-only matching removes spatial cost.
-Descriptors and scales are frozen within a trial. Neither variant is full RobOT.
-Other controls are native CD, saturating NN, centroid alignment and Gaussian MMD.
-Saturating NN is not OAR; MMD fields are not the complete MMD-Reg method.
+Current global proposal and neural transfer
+FGR uses observed source/target geometry and FPFH descriptors. Its transform is
+applied to ORIGINAL sampled source points, then expressed relative to the target
+mean. The fixed anchor A therefore does not follow the current deformation Z.
+The proposed field is f=A-Z. No GT correspondence is used to construct A.
+With J=dZ/dtheta, GD gives delta=J^T f; full ridge gives
+ delta=J^T (J J^T + gamma I)^(-1) f.
+The current PCG candidate solves that same full system. An affine translation-
+head preconditioner accelerates a solve; it does not restrict the parameter
+space or change the exact ridge solution. Standard numerical linear algebra
+and scalar mixing alone are not claimed as novel methods.
+The current ridge ratio is 1e-4 times an eight-step seeded kernel power estimate.
+Use seed 93000+100*pair+level, at most 2,048 CG iterations and actual relative
+residual <=1e-8. Preserve historical controls' own declared settings.
 
-Transfer
-With J=dZ/dtheta, GD uses delta=J^T f. Ordinary ridge solves
- min_delta .5||J delta-f||^2+.5gamma||delta||^2,
-implemented as delta=J^T(JJ^T+gamma I)^(-1)f with JVP/VJP and CG.
-Weighted displacement fitting instead solves
- (J^T R J+gamma I)delta=J^T f, R=diag(r_i I).
-This is standard regularized weighted least squares. RobOT already includes
-correspondence-weighted displacement fitting: https://arxiv.org/abs/2111.00648 .
-Row mass is not assumed to be calibrated correspondence confidence.
-Gamma is a fixed ratio of an eight-step seeded kernel power estimate. The
-standard ratio is.01; weak-damping studies use.0001. Historical solver ceilings
-are preserved; accurate field/joint controls allow2048 CG iterations and require
-actual relative residual<=1e-8. No GT selects damping or a favorable state.
-Raw fit residual, ray alignment, shrinkage and normalized error are different
-quantities. Lower fit error does not establish task improvement or prove that
-the remaining error lies outside the model's tangent range.
+Output normalization and direction mixing
+Normalize each nonzero neural velocity J delta to norm B=sqrt(n)*h, where h is
+pooled within-cloud mean nearest-neighbor spacing. A zero direction stays zero.
+Let a be the normalized PCG ray, c the normalized CD-GD ray, and g the observed
+output gradient. Write sa=g.a and sc=g.c<0. The original mixture has
+ beta0=0 if sa<=.5*sc, otherwise (sa-.5*sc)/(sa-sc).
+Combine parameter rays and normalize their recomputed JVP to B. This guarantees
+the half-reference observed slope in exact arithmetic; it is not a GT guarantee.
+The optional fgr_normmix rule accounts for normalization when choosing beta.
+With rho=(a.c)/B^2, it finds the minimum beta in[0,beta0] satisfying
+ ((1-beta)sa+beta*sc)/sqrt((1-2*beta)^2+2*(1+rho)*beta*(1-beta)) <= .5*sc.
+It uses 64 scalar bisections and retains the feasible endpoint. Nearly parallel
+or antipodal rays, |rho|>=1-1e-12, retain beta0. Invalid geometry and non-descent
+references fail explicitly. The recomputed JVP is checked numerically.
+Only the scalar rule changes; anchor, PCG, CD reference and controller are shared.
+pipeline/native_mix.py exposes the candidate; trajectory_mix.py does not yet
+integrate fgr_normmix into an own-history full trajectory.
 
-Motion and finite acceptance
-Earlier budget/weighted/descriptor studies match the actual Adam output speed.
-That normalization cannot move if Adam's speed is zero. The current field,
-mechanism and joint studies instead normalize linearized RMS output motion to
-observed within-cloud spacing h; a zero direction stays zero.
-Each direction is tested at caps1/16,1/4,1 under raw, own-objective trust and
-common-CD trust policies. Backtracking permits21 dyadic attempts, requires
-Armijo decrease with coefficient.1 and relative output linearization error<=.1.
-For transport, own-objective acceptance uses the frozen-plan change
- Q(d)-Q(0)=.5 sum_i r_i||d_i||^2-sum_i f_i dot d_i.
-Other fields use their frozen-scale objectives. Actual nonlinear output is
-always evaluated. Surrogate decrease does not guarantee CD or GT decrease.
+Native acceptance and optimizer state
+Evaluate actual float32 parameters/output, not only the linear prediction.
+For each declared cap, halve at most 20 times and require observed-CD Armijo
+coefficient .1 plus relative output linearization error <=.1. Screens use caps
+1/16,1/4,1; production-style replacement uses cap1. Preserve rejected steps.
+In diagnostic clones, the original parameters and Adam moments remain intact.
+In trajectory replacements, first advance the actual Adam moments, restore the
+parameters, and apply the accepted alternative. Rejection keeps the advanced
+moments. A fresh post-update forward feeds the next stage. Moments restart per
+stage. The default event is the final stage update; denser schedules must be
+explicit. Errors preserve their record and stop; no silent alternative direction.
 
-Focused mechanism checks
-transfer_mechanism.py separates damping from missing modes in a two-point
-native-CD example. That example alone does not resolve correspondence ambiguity.
-rigid_witness.py strengthens the construction: a centered scalene triangle has
-unique rigid and balanced-OT correspondence, and centroid correction is zero.
-For task E=||Z-G||^2/n, f=-grad C and correct h=(G-Z)/n, a COMMON symmetric PSD
-transfer T obeys grad E dot(Tf)=2 grad C dot(Th). Thus task-harmful CD motion can
-coexist with task-helpful global motion that a CD-decrease test rejects.
-This is elementary symmetry algebra, not a new general optimization theorem.
-The code evaluates all six assignments and actual equal-norm finite steps.
-The constructed J is full rank; it is not asserted to be an observed NDP J.
-Correct matching in this rigid example does not guarantee partial-overlap OT.
+Controls and interpretation
+Historical controls include CD-GD, ridge, Adam, soft/balanced/semi-relaxed/
+unbalanced transport, centroid, saturating NN, feature fields and Gaussian MMD.
+For transport pi, row mass r_i=sum_j pi_ij and force
+ f_i=sum_j pi_ij*(y_j-z_i) differ from barycentric displacement f_i/r_i.
+Zero-mass rows have zero force. Weighted displacement fitting and its mass
+weights are standard least squares, not calibrated matching confidence.
+These are controlled components, not full reproductions of RobOT, OAR or MMD-Reg.
+An exact ridge solve can lose task alignment, and valid CD mixing can reject a
+task-helpful direction. Lower CD does not certify lower correspondence error.
+All original stopping endpoints admit further CD improvement under continuation;
+the current evidence does not establish escape from a local minimum.
 
-ndp_transfer_factorial.py compares CD/UOT at weak damping, using the preceding
-exact-field standard-damping arm as control. GD/Adam and all original replays
-must match exactly. Weak damping helps UOT descent counts but fails matched-CD
-superiority; one state fails the existing absolute MSE identity tolerance.
+Observation and advancement
+The baseline screen uses 6 reused pairs x 9 original endpoints =54 correlated
+states. The separate own-history event audit uses 108 corrections from six paths;
+its states are not interchangeable with the original54. GT observers run after
+proposal/application and are regression-tested for unchanged outputs and RNG.
+For task MSE R, actual motion D obeys
+ R(Z+D)-R(Z)=2<Z-T,D>/n+||D||^2/n.
+Report finite identities, true solver residuals, actual/native motion, both task-
+gradient precisions, rejection counts, full sign chains and pair-level magnitudes.
+A first failing stage is an accounting label, not a unique causal attribution.
+The strict absolute 1e-12 identity checks and original decision grids remain.
+The latest local gate has 40 cells across both data families. A passing candidate
+must next satisfy both measured timing repetitions: 80 native cells and 16 time
+cells. Time includes setup, matching, transfer, normalization and acceptance,
+with both full and nine-use-amortized FGR accounts. Original-history Adam supplies
+last-within, first-after and best-CD-through-first-after comparisons. GT cannot
+select a checkpoint. Counts do not imply mean superiority or statistical evidence.
+Only passing candidates proceed to declared full paths, keeping held-EPE,
+worst-pair, trajectory-AUC and runtime gates. New scenes require full-path success.
+Repeated states, self-reviews and negative-result diagnostics are not acceptances.
 
-pipeline/joint.py and ndp_joint_probe.py compare one versus four correspondence
-updates inside the SAME fixed-J model. CD uses a touching quadratic upper bound
-of native unsquared distance and rejects exact zero-distance singular weights.
-UOT fixes entropy and marginal penalties from INITIAL geometry. All iterations
-solve for a TOTAL delta from the original endpoint with fixed gamma. Both UOT
-variants retain the INITIAL plan for finite acceptance. The report checks inner
-majorizer/reassignment descent, exact controls and actual finite displacements.
-All432 solves pass and no checked MM inequality fails, but both four-step
-candidates fail adoption. Seven raw finite trials fail the absolute MSE identity
-check; zero accepted controlled trials fail. The global numerical gate remains
-failed. These negative outcomes are retained; neither candidate is deployed.
+Code map
+ pipeline/model.py, datasets.py, runner.py, optim.py: native model/data and loops.
+ pipeline/lifting.py, head.py: matrix-free ridge and affine-head preconditioning.
+ pipeline/direction_mix.py, native_mix.py, trust.py: scalar mixing and native trials.
+ pipeline/trajectory_mix.py, prefix.py: own-history replacement and stage outputs.
+ pipeline/update_geometry.py, event_chain.py: evaluation-only movement observers.
+ ndp_*_probe.py: scoped experiments with explicit reference dependencies.
+ *_report.py: saved-grid integrity checks, TXT/JSON summaries and small figures.
+ rigid_witness.py, transfer_mechanism.py: analytic constructions and limitations.
+ tests/: numerical, controller, replay and mathematical regressions.
+ scripts/: pinned upstream definitions and reference preparation.
 
-Evaluation and advancement
-Reports verify complete grids, exact replay/control equality, solver residuals,
-normalization, acceptance and the exact identity
- E(Z+d)-E(Z)=2<Z-G,d>/n+||d||^2/n.
-The strict absolute1e-12 identity gate is retained even for large raw steps;
-its failures are disclosed instead of silently relaxing the criterion.
-Frozen screens compare task-descent gains/losses against GD/Adam and declared
-matched controls at tangent and finite scales in BOTH data families. Rejected
-or zero updates do not count as rescues. Counts and error magnitudes are reported
-separately. Only passing candidates can advance to native full trajectories and
-new independent scenes. No current candidate qualifies. Prior favorable
-self-reviews do not establish independent acceptances or conference readiness.
-The budget audit includes model setup, matching, transfer, normalization and
-finite acceptance, excluding evaluation GT and file writing on both sides.
-Adam continuation preserves moments and uses two measured timing repetitions.
-Selectors receive only observed losses, slopes, residuals and acceptance flags;
-retrospective library oracles use GT solely as non-deployable diagnostic bounds.
-
-Code layout
-pipeline/ contains model/data adapters, losses, optimization, Jacobian solves,
-fields, correspondence, controllers, stopping instrumentation and selection.
-ndp_*_probe.py launches scoped diagnostic clones and refuses reused run folders.
-*_report.py validates saved grids and writes TXT/JSON tables and PNG figures.
-rigid_witness.py and transfer_mechanism.py reproduce analytic constructions.
-tests/ holds mathematical, numerical, controller and reporting checks;
-tests/fixtures/ holds the frozen pre-refactor source fixture.
-scripts/ retrieves pinned upstream definitions and generates reference baselines.
-Small root adapters retain historical imports. Every source is below500 lines.
-This is the only published research document; datasets, results, private proofs,
-checkpoints and caches are not committed.
-
-Setup (run from this document's directory)
-Use a compatible existing Python environment, install a suitable PyTorch build
-and requirements.txt. On Linux:
+Environment and tests (from this document's directory)
+Use an appropriate existing Python environment; dependencies are in requirements.txt.
+Server validation uses Open3D 0.19.0 and PyTorch 2.8 with CUDA. Import Open3D before
+pipeline.model on that server. Pinned definitions come from scripts/fetch_ndp.py:
+NDP commit 63e9e2767e3db96a12bae18146971adeddcb9a4e, plus hash-checked InfoCD/DCD.
+The fetcher preserves differing existing files. Upstream licenses still apply.
  mkdir -p cache/matplotlib tmp paper_revision
  export PYTHONDONTWRITEBYTECODE=1 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
  export MPLCONFIGDIR="$PWD/cache/matplotlib" TMPDIR="$PWD/tmp"
  export OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
- python scripts/fetch_ndp.py
- python -m pytest -q
-The fetcher checks SHA256 hashes of NDP definitions at commit
-63e9e2767e3db96a12bae18146971adeddcb9a4e from
-https://github.com/rabbityl/DeformationPyramid and pinned InfoCD/DCD controls.
-It preserves original function/class logic; upstream licenses still apply.
-Existing different files are not overwritten. For an offline server, transfer
-only the fetched assets/{ndp,infocd,dcd}_official directories into this lab.
-CPU tests require those definitions and Open3D. GPU/data tests skip if resources
-are unavailable; a skip is not validation of experiment reproduction.
+ export CUDA_CACHE_DISABLE=1
+ python -B scripts/fetch_ndp.py
+ CUDA_VISIBLE_DEVICES=-1 python -B -m pytest -q -p no:cacheprovider tests
+GPU replay tests require prepared assets and the original reference environment;
+a skip is not a successful replay. Cross-platform bitwise GPU parity is not assumed.
+Use only an allocated idle GPU for experiment commands. Do not alter other jobs.
 
-Prepared data (not redistributed):
- assets/4dmatch_replication/{100,101,124,125}.npz:
-   s_pc,t_pc,s2t_flow,rot,trans,correspondences
- assets/hf_3dmatch/{200,201}.npz:
-   source,target,truth,overlap,scale
-Respect original dataset permissions and preparation; arbitrary same-key NPZs
-do not reproduce the study. Set CUDA_VISIBLE_DEVICES to an allocated idle GPU
-and CUDA_CACHE_DISABLE=1 before GPU runs. Import Open3D before pipeline.model.
+Current experiment entry points
+These require the prepared assets AND verified local reference artifacts. A code
+checkout alone does not contain those datasets, traces, poses or validation records.
+Do not substitute arbitrary same-key NPZs or fabricate prerequisite records.
+ ndp_global_event_chain.py; global_event_chain_report.py
+   Replays continuation_geometry_20261018 restored paths and108 actual events.
+ ndp_normalized_mix_probe.py [--report-only]
+   Checks normalized mixing at54 stopping endpoints against native_mix_20261018
+   and head_preconditioner_20261018 controls; writes normalized_mix_20261018.
+Earlier source/reference dependencies remain explicit in each probe. Existing
+verified artifacts may replace expensive regeneration; each probe checks its
+reference grid rather than silently constructing a different experiment.
+Do not rerun into populated output directories. Reports regenerate from saved
+records; data/fixture omissions do not justify rerunning completed experiments.
 
-Current reproduction sequence, with those assets:
- python scripts/baseline.py
- mkdir -p paper_revision/stopping_20261018
- python ndp_stopping_probe.py
- python ndp_stopping_handoff.py
- python stopping_report.py
- mkdir -p paper_revision/fields_20261018/exact
- python ndp_field_probe.py
- python fields_report.py
- python ndp_exact_field_probe.py
- python exact_fields_report.py
- python field_selection_report.py
- mkdir -p paper_revision/mechanism_20261018/weak
- python transfer_mechanism.py
- python ndp_transfer_factorial.py
- python transfer_factorial_report.py
- mkdir -p paper_revision/joint_20261018
- python rigid_witness.py
- python ndp_joint_probe.py
- python joint_report.py
-Existing verified reference results can replace regeneration. joint_report.py
-requires the exact-field controls and weak-factorial controls; no private prose
-files are required. Historical capacity/feature/budget/weighted/descriptor probes
-and matching reports remain available in that dependency order. Selection needs
-weighted/descriptor records; damping --accurate checks its standard controls
-against descriptor records. Report scripts consume local observations and output
-text/figures only. Every pre-fit storage check requires the lab below800MB;
-the complete working folder must remain below1GB. No unrelated folder or job
-belongs to this pipeline's execution scope.
-
-Implementation and accepted-state refresh audit
-tests/test_joint_reference.py compares all four total updates to independent
-dense normal equations, checks nonzero refresh coordinates, and solves UOT's
-primal KKT equations with SciPy instead of the production Sinkhorn code. It also
-checks the regularizer shift needed to express a total solve as an increment.
-These cases pass; they are evidence against the tested algebra mistakes, not
-exhaustive correctness or a guarantee of task descent.
-
-The old fixed-J experiment does not make four actual network updates. Its last
-matching position can be much farther from the start than the eventual accepted
-output. pipeline/refresh.py instead makes four accepted nonlinear updates,
-rebuilding J each time. Frozen and refreshed matching arms share the SAME true
-CD or minimized UOT acceptance objective, initial entropy, damping and motion
-scale. UOT finite acceptance therefore re-solves matching; this is costlier
-than checking frozen Q. Four updates are not an equal-time comparison to one.
-GT is absent from the trajectory constructor. No baseline parameters are changed.
-
-CUDA index_add makes historical CD weights/forces differ in their low bits on
-identical inputs. The new code enables deterministic algorithms only during CD
-matching and restores the setting immediately. Historical CD exact-control
-failures remain recorded; solver and MSE-identity thresholds are unchanged.
-UOT historical controls retain exact comparisons. Both new arms must have
-identical first outputs and the complete original baselines must replay exactly.
-Stopped audits are preserved separately from the complete verified/ rerun.
-If the initial finite-difference spacings cross a piecewise-smooth branch, the
-check shrinks spacing down to2^-26, retaining the same1e-4 relative threshold.
-ndp_refresh_audit.py records54 JVP/VJP/finite-difference checks and864 step rows.
-refresh_report.py separates positional mismatch, reproducibility, objective
-decrease and task outcomes. This audit alone cannot establish adoption.
-Its post-hoc trajectory figure and slope counts separate task-increasing tangent
-predictions from finite-step outcomes; they do not certify all ReLU derivatives.
- mkdir -p paper_revision/refresh_audit_20261018/verified
- python ndp_refresh_audit.py
- python refresh_report.py
-The report requires the preceding joint study and its verified/ audit records.
-
-Proposal-versus-transfer attribution
-ndp_refresh_attribution.py replays all864 accepted-path records exactly. A small
-optional observer in accepted_path runs after step selection, without changing
-the proposal, solver or controller. GT is read only by the separate evaluation
-function in slope_attribution.py. It compares force f, the actual least-squares
-target d=f/m, and raw neural motion u=J*delta. Mass normalization can change task
-alignment before neural transfer; zero-mass movement is recorded separately.
-The identity g.u=g.d+g.(u-d), task cosines and transfer residuals locate sign
-changes. An elementary exact ridge example confirms that a useful d can become
-harmful under regularized transfer without an implementation bug. This does
-not isolate limited representation from damping, or provide a new method.
-attribution_report.py checks complete replay and reports per-family/pair counts
-and a direction plot. Counts remain correlated development diagnostics, not
-independent observations, and GT-based alignment is never a deployed selector.
- mkdir -p paper_revision/attribution_20261018
- python ndp_refresh_attribution.py
- python attribution_report.py
-
-Fixed-state damping bracket
-ndp_ridge_bracket.py keeps the initial CD/UOT matching, Jacobian and motion scale
-fixed and tests0.1,1,10 times the original damping. All108 central first-update
-records must exactly replay the attribution study, and all6 original baselines
-must replay. This probes initial endpoints, not the later refresh trajectory.
-ridge_bracket_report.py compares fitting error, task signs and accepted cap1
-moves. It reuses the verified joint study's GD/Adam controls at the same bound.
-A failed tangent/cap1 GD/Adam condition rejects a candidate; additional matched
-field controls check attribution. Passing this screen is insufficient: remaining
-policies/caps, equal-time controls, full trajectories and new scenes still apply.
-Lower residual at finite damping does not identify an irreducible range error.
- mkdir -p paper_revision/ridge_bracket_20261018
- python ndp_ridge_bracket.py
- python ridge_bracket_report.py
-
-Known global registration and frozen-anchor control
-global_registration_control.py uses Open3D0.19 FGR on full observed clouds, with
-the same voxel/FPFH preparation as the saved RANSAC control. The version0.19
-example supplies distance1.5voxels,64 iterations and1000 tuples; all remaining
-options are explicit. The spacing-based voxel rule is a declared adaptation.
-All six transforms are saved before GT evaluation. The independent FPFH nearest-
-neighbor audit reports geometric support and precision, not native FGR filtering.
-This established method is a diagnostic control, not a novel proposed algorithm.
-ndp_fgr_probe.py transfers the fixed rigidly transformed ORIGINAL source samples
-to all54 original NDP endpoints, using the original target centering. It compares
-direct pullback and ridge against CD-GD, CD-ridge and original-history Adam.
-The existing finite_trials controller and fields_report.assess gates are reused;
-standalone improvement versus centroid is insufficient for neural adoption.
-GT is used only for evaluation; no pose/seed/parameter is selected with GT.
-The pose stage requires the saved joint-study RANSAC controls; the neural stage
-requires the original stopping reference, and the report checks joint controls.
- mkdir -p paper_revision/fgr_20261018
- python global_registration_control.py
- mkdir -p paper_revision/fgr_20261018/neural
- python ndp_fgr_probe.py
- python fgr_report.py
-
-Observed-loss direction mixing
-direction_mix_report.py freezes one coefficient per original endpoint using only
-the FGR-ridge and CD-GD Chamfer slopes. Both velocities have the same norm. It
-chooses the least CD-GD mixing that retains half of CD-GD's local CD decrease,
-then normalizes the mixed parameter step to the same output motion bound.
-pipeline/direction_mix.py proves this via a scalar constraint and supplies norm
-bounds for task-sign evaluation when only stored slopes are available. The
-evaluation-only existence audit never chooses a deployed coefficient with GT.
-This is a diagnostic use of established gradient-conflict correction ideas.
-If the original GD/Adam tangent conditions pass, ndp_mix_probe.py recomputes
-actual mixed parameter steps, verifies their JVPs and performs unchanged finite
-trials using real Chamfer acceptance. An identically corrected FGR-GD arm checks
-transfer attribution. mix_finite_report.py retains both families and all original
-direction/finite conditions. Passing the tangent screen is not adoption.
-Each finite MSE identity is recorded. A failed float64 identity gets a separate
-80-digit Decimal reference in pipeline/mse_reference.py; the historical absolute
-gate and failure status remain visible and are not silently overridden.
-These scripts require the saved FGR study, frozen choices and original references.
- mkdir -p paper_revision/mix_20261018
- python direction_mix_report.py
- mkdir -p paper_revision/mix_20261018/finite
- python ndp_mix_probe.py
- python mix_finite_report.py
-An optional --precise-metrics replay writes a separate precise/ study and
-evaluates every finite task identity at80-digit precision with the same absolute
-1e-12 threshold. The report requires exact proposal/observed-trial parity and
-unchanged task classifications/counts relative to finite/. Historical results
-remain intact. This repairs evaluation arithmetic, not the update algorithm.
- mkdir -p paper_revision/mix_20261018/precise
- python ndp_mix_probe.py --precise-metrics
- python mix_finite_report.py --precise-metrics
-
-Native precision and time-matched continuation
-pipeline/native_mix.py keeps the accepted mixed-direction rule but evaluates
-actual float32 parameter updates and forwards. The start loss and all trial
-losses use native arithmetic; rounding is included in the motion check.
-ndp_native_mix_probe.py tests six controls/candidates at all54 original endpoints
-twice, verifies the previous double directions, and exactly replays the original
-baseline and observed FGR poses. It records per-method setup/direction/controller
-costs. The primary cap1 budget charges FGR preparation both in full and divided
-by nine uses; the latter is an accounting scenario, not a completed trajectory.
-Same-state Adam continues its own native moments. Its first over-budget point
-and best-observed-CD prefix are retained; GT never selects an Adam checkpoint.
-native_mix_report.py validates both repetitions, unchanged local/finite gates,
-and the separately declared compute-matched task screen. GT/Decimal diagnostics
-are excluded from both deployed-cost measurements. Native/double outcomes must
-not be conflated, and any failed family/repetition remains failed.
-This stage requires the precise mixed-study records and frozen FGR poses.
- mkdir -p paper_revision/native_mix_20261018
- python ndp_native_mix_probe.py
- python native_mix_report.py
-
-Own-history fixed-budget trajectories
-trajectory_preflight.py verifies exact restricted/full direction and native-trial
-parity for four methods on six existing final-level states, with exact baseline
-replays. pipeline/native_mix.py can compute only the deployed method and cap1;
-unused diagnostic solves/caps are excluded from deployment cost. Trial clones
-clear observation hooks so they cannot overwrite the live optimizer's inputs.
-pipeline/trajectory_mix.py replaces update49 at each of nine levels; the other
-441 updates are ordinary Adam. Each arm advances its own Adam moments once per
-attempt, restores the old parameters before proposing a controlled alternative,
-and commits exactly the accepted native float32 trial. A rejection preserves
-parameters while moments remain advanced. No GT reaches this update interface.
-The frozen FGR anchor uses original sampled source IDs, recovered without global
-RNG consumption, and the original target centering. The fixed_official final
-post-update forward supplies the next level's input.
-ndp_mix_trajectory.py compares plain Adam, controlled Adam, CD-ridge, FGR-GD mix
-and FGR-ridge mix on six reused development pairs, twice. Each fit has450
-attempted updates and459 training loss calls. Each FGR fit recomputes and verifies
-its fixed observed pose and charges its full preparation cost once. Cyclic arm
-order, initialization, eta=.5, damping1e-4 and nine interventions are frozen.
-trajectory_mix_report.py requires >=2% family mean held-EPE improvement versus
-BOTH Adam controls, no pair >5% worse than plain Adam, nonincreasing family
-training-MSE AUC versus both controls, median paired total time<=2x plain Adam,
-and exact numerical/repetition checks. Every gate applies in each repetition.
-AUC uses each level's steps0,25,50 trapezoid and then averages the nine levels.
-Local acceptance does not imply final task improvement. A failure prevents new
-scene evaluation. Repeated executions of reused pairs are not independent data.
-This study requires fixed-budget replication_4d/replication_hf references and
-the preceding successful native/time audit; it is separate from500-stop states.
- mkdir -p paper_revision/trajectory_mix_20261018
- python trajectory_preflight.py
- python ndp_mix_trajectory.py
- python trajectory_mix_report.py
-If the full-trajectory gate fails, trajectory_task_audit.py diagnoses all54
-primary interventions without tuning: original-source force and lifted task
-slopes, accepted native task change, and the actual own-history Adam delta at
-the same state. GT is confined to external observers after direction/selection;
-all final metrics, traces and2700 update records must replay exactly. Its six
-diagnostic replays and extra evaluation time do not replace the original gates
-or deployment timings. This one-step counterfactual does not establish a better
-future trajectory or independent generalization.
- python trajectory_task_audit.py
-
-Single-intervention horizon diagnosis
-pipeline/trajectory_mix.py accepts a fixed set of intervention levels; the default
-still corrects all nine levels. pipeline/horizon.py only observes a run: it records
-every sampled forward, training task error, and full/held errors at boundaries.
-Full-prefix queries bypass the input-observation hooks so they cannot change live
-training inputs. Tests change the evaluation truth while requiring identical
-selected updates, native outputs and RNG state.
-ndp_horizon_probe.py compares an intervention at level0 or8, step49, with an
-explicit ordinary-Adam branch on each of six reused pairs (24 fits). Only one
-update is replaced; every later update is plain Adam. Initial weights, sample IDs,
-pre-intervention weights/moments and every pre-intervention observation must match
-exactly. All twelve plain branches replay the saved fixed-budget baseline.
-horizon_report.py reports immediate and terminal effects and the first subsequent
-sign reversal of the task benefit. Training MSE is recorded at every forward;
-held/full errors are observed before/after intervention and at level boundaries.
-These evaluation-only, instrumented timings are not deployment-cost estimates.
-Early and late interventions start from different states: compare each with its
-own matched branch. No schedule is selected with GT, and this diagnostic study
-cannot replace failed adoption gates or establish new-scene generalization.
- mkdir -p paper_revision/trajectory_horizon_20261018
- python ndp_horizon_probe.py
- python horizon_report.py
-
-Deformation and point-gradient trajectory measurements
-ndp_projection_probe.py replays both early-intervention branches on all six pairs
-without changing any update. pipeline/projection.py observes native point-CD
-gradients and nearest-neighbor assignments, retaining the normal backward graph.
-Baseline point/gradient/assignment snapshots stay in RAM for one pair; no arrays
-or parameter checkpoints are saved. At each later forward the probe measures
-the paired deformation's signed projection on its initial deviation, orthogonal
-growth, gradient alignment and changed forward/reverse assignment fractions.
-Both target samples and the complete previous output/update/observation records
-must replay exactly. Zero-gradient cases remain explicit. Only after replay are
-observed quantities joined with the saved task gaps. Initial-direction retention
-must not be confused with task improvement or with the cause of a reversal.
-The report verifies the orthogonal-decomposition identity and shows every pair.
-It also reconstructs the squared-risk linear and positive quadratic terms from
-saved task gaps and paired displacement norms. This post-hoc algebra is not an
-independent GT-dot-product measurement and never influences the replayed updates.
-This is a diagnostic extension of the same paths, not independent data, a new
-acceptance gate, a deployment-cost measurement or a controller selected with GT.
- mkdir -p paper_revision/trajectory_projection_20261018
- python ndp_projection_probe.py
- python ndp_projection_probe.py --report-only
-
-Affine translation-head candidate screen
-pipeline/head.py exposes its damping ratio, retaining the old default of .01.
-The optional fgr_headmix direction uses the current FGR anchor residual with a
-1e-4 regularized affine-head solve and the SAME full CD-GD reference and eta=.5
-mixing. It verifies the head velocity against the full-model JVP. The pure head
-component is affine; the mixture can change hidden/rotation parameters and still
-requires native finite-motion and CD acceptance checks. No full-ridge solve is
-used by this candidate; the previous default directions remain unchanged.
-ndp_head_mix_probe.py replays the same six original-stopping fits and frozen FGR
-poses. At all 54 endpoints it rechecks CD-GD and actual-history Adam directions
-and native finite trials against saved controls before reusing other controls.
-Raw and mixed head proposals use the existing three caps and 80-digit task-MSE
-reference. Both families must pass all 40 existing local/finite cells before a
-separate two-repetition timing audit; no full trajectory is authorized by this
-screen alone. Task magnitudes and EPE accompany descent counts. Standard FGR
-and regularized affine readout are controls/building blocks, not novelty claims.
- mkdir -p paper_revision/fgr_head_20261018
- python ndp_head_mix_probe.py
- python ndp_head_mix_probe.py --report-only
-
-Head-preconditioned full-ridge solver screen
-pipeline/lifting.py optionally preconditions CG; its default unpreconditioned
-path is preserved. pipeline/head.py applies the inverse of the affine head kernel
-plus the SAME full-system damping through a small Cholesky factorization and the
-Woodbury identity. The full Jacobian, spectral estimate, ridge objective and
-parameter subspace remain unchanged. True residuals are recomputed at termination;
-recursive residuals or iteration counts alone cannot establish solve accuracy.
-The fgr_pcgmix direction uses the old force, full-CD-GD mixing and native controller.
-ndp_pcg_probe.py replays all 54 original endpoints, balances which production
-proposal is measured first, and verifies ordinary/full-ridge native controls
-against saved records. It records both solvers, normalized velocity discrepancies,
-finite acceptances and all old local gates. Its preliminary proposal timing is
-not the later two-repetition matched-time Adam audit. Faster convergence is an
-empirical question; preconditioning does not itself prove lower runtime, better
-task error, or a remedy for the previous full-trajectory failure.
-ndp_head_mix_probe.py supplies the common endpoint callback and gate/report code;
-its original head-only entry point and report remain unchanged by default.
- mkdir -p paper_revision/head_preconditioner_20261018
- python ndp_pcg_probe.py
- python ndp_pcg_probe.py --report-only
-
-Repeated PCG deployment-cost and Adam-budget audit
-ndp_pcg_timing.py executes two paired production-only proposals/controllers at
-every original endpoint, reversing solver order by pair, level and repetition.
-It reuses the same native trial probe and checks common controls against their
-saved records. The returned cap1 deployment costs include setup, relevant solve,
-mixing, anchor evaluation and controller; all other trial/GT/logging costs are
-excluded. Costs are sums of synchronized deployment operations, not full-fit
-wall times. Both full and nine-use FGR preparation accounts remain explicit.
-Actual-history Adam continues through the first evaluation beyond the larger
-budget. Its first update must match an independent native clone. Last-within,
-first-beyond and best-CD-prefix selections precede their GT evaluations.
-pcg_timing_report.py verifies deadlines and selected histories, exact repeated
-native results, each of the old80 native/16 time cells, and paired acceleration
-in both families in each repetition. Mean task changes and EPE accompany counts.
-Neither faster solver iterations nor these gates establish final registration
-improvement; the earlier failed full-trajectory result remains unresolved.
- mkdir -p paper_revision/pcg_timing_20261018
- python ndp_pcg_timing.py
- python pcg_timing_report.py
-
-Cost-calibrated full trajectories with strong early-stopping controls
-The frozen dense_pcg calibration uses only saved costs and chooses16 updates per
-stage with events at7 and15. The planning target is median1.8x full-Adam time;
-the actual total-time gate stays2x. This is an approximate allocation, not a cost
-upper bound. pipeline/trajectory_mix.py accepts an explicit common stage length
-and event steps; its default50/end-only behavior is unchanged. It also supports
-the already validated fgr_pcgmix direction. pipeline/runner.py accepts explicit
-evaluation trace steps; changing those steps or GT must leave updates/RNG intact.
-ndp_dense_trajectory.py compares full plain/controlled Adam9x50, short
-plain/controlled Adam9x16, short end-only PCG mix, and short twice-per-stage
-CD-ridge/FGR-GD mix/primary FGR-PCG mix. These eight arms run on the same six
-pairs twice. All full controls replay their old results; all repeated arms
-must match non-timing records. Every FGR fit charges preparation once.
-dense_trajectory_report.py retains the old full EPE/worst-pair/AUC/time gates
-and additionally requires EPE/AUC superiority to both short Adam controls.
-Normalized AUC uses0,midpoint,end in every stage; it is not an equal-wall-time
-integral. End-only/GD-mix/CD-ridge comparisons address attribution separately.
-No new scenes follow a failed full gate. This study requires the frozen cost
-calibration and a passing two-repeat PCG audit; defaults must replay first.
- python ndp_dense_trajectory.py --preflight
- python ndp_dense_trajectory.py
- python dense_trajectory_report.py
-
-Fixed-event ordinary-update restoration
-ndp_ordinary_restore.py preserves both early PCG events7,15 while extending each
-stage from16 to50 attempted updates. It compares full plain Adam, the replayed
-short PCG mixture and the restored mixture on all six pairs in two executions.
-pipeline/prefix.py observes the first17 prediction/target/RNG hashes, original
-source sample IDs and initialized parameters without GT inputs. The two PCG
-paths must share their first-stage16-update prefix; later-stage inputs may differ.
-The observation must preserve final native outputs, updates and RNG state.
-All arms include its same initial hash work in fit timing; FGR preparation is
-charged once. Existing full/short controls replay exactly; repeated task records
-must match. ordinary_restore_report.py applies the unchanged36 cells, using
-fresh full-Adam time and saved controlled-Adam task references. Sparse normalized
-AUC and actual runtime remain separate. Restoration is not assumed to recover
-task accuracy or satisfy the time cap. A failed full criterion forbids new scenes.
- mkdir -p paper_revision/ordinary_restore_20261018
- python ndp_ordinary_restore.py
- python ordinary_restore_report.py
-
-Actual continuation movement diagnostic
-ndp_continuation_geometry.py replays the six verified restored trajectories
-without changing any update. pipeline/update_geometry.py observes actual native
-motions, point-space CD directional products, task and fixed-FGR-anchor MSE
-linear/quadratic terms, and full/held errors at stage observations16 and50.
-The GT observation cannot affect proposals or acceptance; regressions compare
-observed/unobserved paths and changed evaluation truth. pipeline/prefix.py can
-wrap another loss observer while retaining its original default objective.
-Every saved result/update/trace and initial prefix must replay exactly. MSE
-identities and within-stage telescoping use an absolute1e-12 check in float64.
-continuation_geometry_report.py separates early ordinary updates, each global
-event and late ordinary updates. A fixed zero-anchor-change split is descriptive,
-with near-zero counts reported; it is not a fitted selector or a guarded run.
-No new candidate, adoption or independent-scene claim follows from this audit.
- mkdir -p paper_revision/continuation_geometry_20261018
- python ndp_continuation_geometry.py
- python continuation_geometry_report.py
-
-Global event force/transfer/mixing diagnostic
-pipeline/trajectory_mix.py optionally calls an observer only after committing
-the native replacement and appending its record; the default path is unchanged.
-pipeline/event_chain.py reads evaluation truth at that point and observes the
-already computed raw-anchor, full-PCG, CD-reference and mixed velocities plus
-the actual motion. It records both double/native task-gradient products and
-reconstructs the normalized mixture with an absolute1e-12 numerical check.
-GT never selects a direction or step. Changed-truth and observation regressions
-must preserve outputs, updates, prefix hashes and RNG. ndp_global_event_chain.py
-replays all six restored paths and matches108 finite events against the previous
-movement audit. global_event_chain_report.py reports both gradient bases, all
-sign patterns, near-zero values and per-pair event tables. A first non-descent
-label is an accounting description, not a unique causal explanation. No solver,
-mixing weight, controller, schedule or adoption threshold changes in this audit.
- mkdir -p paper_revision/global_event_chain_20261018
- python ndp_global_event_chain.py
- python global_event_chain_report.py
-
-Normalization-aware mixture screen
-pipeline/direction_mix.py optionally solves the observed normalized-direction
-constraint by64 scalar bisections. The half-reference descent requirement is
-unchanged. Nearly parallel/antipodal rays retain the existing linear rule.
-pipeline/native_mix.py exposes fgr_normmix: the full-PCG force, seed, ridge,
-motion norm and native controller are unchanged; only the mixture fraction
-differs. No task labels enter this function. The old default remains intact.
-ndp_normalized_mix_probe.py evaluates all54 original endpoints and checks old
-PCG/CD/Adam native controls exactly. It reuses the original40 local/finite cells
-and records per-pair magnitudes. Any failed cell stops expansion to timing or
-full trajectories. Development-state diagnostics do not establish adoption.
- mkdir -p paper_revision/normalized_mix_20261018
- python ndp_normalized_mix_probe.py
- python ndp_normalized_mix_probe.py --report-only
+Storage and publication
+All runtime assets, results, private proofs, caches and temporary files stay in
+this isolated lab under data. Keep each local/server lab below 1GB; the prefit
+limit is 800MB. Save text records and small figures instead of model checkpoints.
+Each owned source file and this document are below 500 lines. This is the single
+published English pipeline document. Datasets, results, private proofs and caches
+are ignored by Git. Do not modify unrelated folders, processes or environments.
