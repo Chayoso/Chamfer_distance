@@ -59,12 +59,12 @@ def collect():
     return rows
 
 
-def assess(rows):
+def assess(rows,primary=PRIMARY,candidates=ARMS[4:],attribution_bases=ARMS[4:7]):
     index={(r['repetition'],r['pair'],r['arm']):r for r in rows};gates=[];comparisons=[];attribution=[]
     mean=lambda seq,key:float(np.mean([r[key] for r in seq]))
     for repeat in (0,1):
         for group,pairs in (('4DMatch',PAIRS[:4]),('HF',PAIRS[4:])):
-            for arm in ARMS[4:]:
+            for arm in candidates:
                 candidate=[index[repeat,p,arm] for p in pairs]
                 for baseline in BASES:
                     base=[index[repeat,p,baseline] for p in pairs]
@@ -75,19 +75,19 @@ def assess(rows):
                         median_total_time_ratio=float(np.median([c['total_seconds']/b['total_seconds'] for c,b in zip(candidate,base)])),
                         worst_pair_epe_ratio=max(c['held_epe']/b['held_epe'] for c,b in zip(candidate,base)))
                     comparisons.append(record)
-                    if arm==PRIMARY:
+                    if arm==primary:
                         gates.extend([dict(repetition=repeat,criterion='held_epe',group=group,baseline=baseline,
                             value=record['held_epe_improvement'],required='>=0.02',passed=record['held_epe_improvement']>=.02),
                             dict(repetition=repeat,criterion='train_auc',group=group,baseline=baseline,
                             value=record['train_mse_auc_ratio'],required='<=1',passed=record['train_mse_auc_ratio']<=1)])
-            candidate=[index[repeat,p,PRIMARY] for p in pairs]
-            for baseline in ARMS[4:7]:
+            candidate=[index[repeat,p,primary] for p in pairs]
+            for baseline in attribution_bases:
                 base=[index[repeat,p,baseline] for p in pairs]
                 attribution.append(dict(repetition=repeat,group=group,baseline=baseline,
                     held_epe_improvement=1-mean(candidate,'held_epe')/mean(base,'held_epe'),
                     train_mse_auc_ratio=mean(candidate,'train_mse_auc')/mean(base,'train_mse_auc')))
-        worst=max(index[repeat,p,PRIMARY]['held_epe']/index[repeat,p,'full_adam']['held_epe'] for p in PAIRS)
-        timing=float(np.median([index[repeat,p,PRIMARY]['total_seconds']/index[repeat,p,'full_adam']['total_seconds'] for p in PAIRS]))
+        worst=max(index[repeat,p,primary]['held_epe']/index[repeat,p,'full_adam']['held_epe'] for p in PAIRS)
+        timing=float(np.median([index[repeat,p,primary]['total_seconds']/index[repeat,p,'full_adam']['total_seconds'] for p in PAIRS]))
         gates.extend([dict(repetition=repeat,criterion='worst_pair',value=worst,required='<=1.05',passed=worst<=1.05),
             dict(repetition=repeat,criterion='total_time',value=timing,required='<=2',passed=timing<=2)])
     assert len(gates)==36

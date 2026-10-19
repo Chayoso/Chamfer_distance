@@ -519,3 +519,21 @@ calibration and a passing two-repeat PCG audit; defaults must replay first.
  python ndp_dense_trajectory.py --preflight
  python ndp_dense_trajectory.py
  python dense_trajectory_report.py
+
+Fixed-event ordinary-update restoration
+ndp_ordinary_restore.py preserves both early PCG events7,15 while extending each
+stage from16 to50 attempted updates. It compares full plain Adam, the replayed
+short PCG mixture and the restored mixture on all six pairs in two executions.
+pipeline/prefix.py observes the first17 prediction/target/RNG hashes, original
+source sample IDs and initialized parameters without GT inputs. The two PCG
+paths must share their first-stage16-update prefix; later-stage inputs may differ.
+The observation must preserve final native outputs, updates and RNG state.
+All arms include its same initial hash work in fit timing; FGR preparation is
+charged once. Existing full/short controls replay exactly; repeated task records
+must match. ordinary_restore_report.py applies the unchanged36 cells, using
+fresh full-Adam time and saved controlled-Adam task references. Sparse normalized
+AUC and actual runtime remain separate. Restoration is not assumed to recover
+task accuracy or satisfy the time cap. A failed full criterion forbids new scenes.
+ mkdir -p paper_revision/ordinary_restore_20261018
+ python ndp_ordinary_restore.py
+ python ordinary_restore_report.py
