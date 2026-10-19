@@ -6,7 +6,7 @@ from .native_mix import directions, native_trials
 
 
 def trajectory_factory(kind,records,pair,pose=None,levels=None,updates_per_level=50,event_steps=None,event_observer=None):
-    if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_pcgmix'):
+    if kind not in ('adam','adam_trust','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_pcgmix','fgr_normmix'):
         raise ValueError(kind)
     events=(updates_per_level-1,) if event_steps is None else tuple(event_steps)
     if updates_per_level<=0 or len(set(events))!=len(events) or any(s not in range(updates_per_level) for s in events):

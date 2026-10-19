@@ -74,8 +74,8 @@ It uses 64 scalar bisections and retains the feasible endpoint. Nearly parallel
 or antipodal rays, |rho|>=1-1e-12, retain beta0. Invalid geometry and non-descent
 references fail explicitly. The recomputed JVP is checked numerically.
 Only the scalar rule changes; anchor, PCG, CD reference and controller are shared.
-pipeline/native_mix.py exposes the candidate; trajectory_mix.py does not yet
-integrate fgr_normmix into an own-history full trajectory.
+pipeline/native_mix.py exposes the candidate; trajectory_mix.py can apply it
+within a declared own-history research trajectory. This is not adoption.
 
 Native acceptance and optimizer state
 Evaluate actual float32 parameters/output, not only the linear prediction.
@@ -167,6 +167,11 @@ Do not substitute arbitrary same-key NPZs or fabricate prerequisite records.
    field construction, all inner products and native-output conversion. Checks
    all80 native/16 time cells and the earlier full-ridge speed condition. The
    previous PCG mixture is also timed separately. Diagnostic GT work is excluded.
+ ndp_normalized_trajectory.py [--preflight | --report-only]
+   Reuses the dense trajectory loop: the previous eight arms plus normalized
+   mixing at the same cost-selected16-update budget, two executions per pair.
+   Preflight reproduces the old default path. All96 previous-arm fits must match
+   saved non-timing results, and the original36 full-path gates remain required.
 Earlier source/reference dependencies remain explicit in each probe. Existing
 verified artifacts may replace expensive regeneration; each probe checks its
 reference grid rather than silently constructing a different experiment.

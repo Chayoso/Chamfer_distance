@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+import pytest
 import torch
 from pipeline.model import config
 from pipeline.optim import fixed_official
@@ -64,15 +65,17 @@ def test_short_plain_schedule_preserves_original_updates_and_sampling():
     assert [r['moment_step'] for r in records]==list(range(1,17))*2
 
 
-def test_two_pcg_events_keep_original_anchor_and_own_moment_progress(monkeypatch):
+@pytest.mark.parametrize('kind',('fgr_pcgmix','fgr_normmix'))
+def test_two_pcg_events_keep_original_anchor_and_own_moment_progress(monkeypatch,kind):
     import pipeline.trajectory_mix as trajectory
     captured=[];original=trajectory.directions
     def capture(layer,inputs,target,anchor,*args,**kwargs):
+        assert kwargs['method']==kind
         captured.append((inputs.clone(),anchor.clone()))
         return original(layer,inputs,target,anchor,*args,**kwargs)
     monkeypatch.setattr(trajectory,'directions',capture)
     pose=torch.eye(4,dtype=torch.float64);pose[:3,3]=.1;records=[]
-    result,_=run(lambda:trajectory_factory('fgr_pcgmix',records,100,pose,updates_per_level=16,event_steps=(7,15)),16)
+    result,_=run(lambda:trajectory_factory(kind,records,100,pose,updates_per_level=16,event_steps=(7,15)),16)
     assert torch.isfinite(result).all() and len(captured)==4
     assert all(torch.equal(captured[0][1],x[1]) for x in captured)
     assert torch.equal(captured[0][0],captured[1][0]) and not torch.equal(captured[1][0],captured[2][0])

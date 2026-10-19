@@ -13,6 +13,9 @@ ARMS=('full_adam','full_adam_trust','short_adam','short_adam_trust',
       'short_pcg_end','short_cd_ridge','short_fgr_gdmix','short_fgr_pcgmix')
 PRIMARY='short_fgr_pcgmix'
 KINDS=dict(zip(ARMS,('adam','adam_trust','adam','adam_trust','fgr_pcgmix','cd_ridge','fgr_gdmix','fgr_pcgmix')))
+PREREQUISITE=ROOT/'paper_revision/pcg_timing_20261018/summary.json'
+MATCHED_REFERENCE=None
+REFERENCE_ARMS=ARMS
 
 
 def allocation():
@@ -48,7 +51,7 @@ def preflight():
 
 def main():
     n=allocation()
-    assert json.loads((ROOT/'paper_revision/pcg_timing_20261018/summary.json').read_text())['advance_to_cost_based_schedule']
+    assert json.loads(PREREQUISITE.read_text())['advance_to_cost_based_schedule']
     assert json.loads((OUT/'preflight/complete.json').read_text())['exact_default_replays']==2
     root=OUT/'runs';root.mkdir(exist_ok=False);completed=[]
     for repeat in (0,1):
@@ -73,17 +76,24 @@ def main():
                 assert trace.shape==(27,8) and np.isfinite(trace).all()
                 assert np.array_equal(trace[:,:2],np.asarray([(l,s) for l in range(9) for s in (0,steps//2,steps)]))
                 if arm.startswith('full'):exact_reference(folder,OLD/'r0'/kind,stem,result,records)
+                if MATCHED_REFERENCE is not None and arm in REFERENCE_ARMS:
+                    exact_reference(folder,MATCHED_REFERENCE/'r0'/arm,stem,result,records)
                 if repeat:exact_reference(folder,root/'r0'/arm,stem,result,records)
                 prep=0. if pose is None else pose['seconds']
                 ledger=dict(pair=pair,arm=arm,kind=kind,repetition=repeat,pose=pose,updates_per_level=steps,event_steps=list(events),
                     fit_seconds=result['seconds'],preparation_seconds=prep,total_seconds=result['seconds']+prep,
                     updates=9*steps,loss_calls=9*(steps+1),exact_full_replay=arm.startswith('full'),repeat_exact=bool(repeat))
+                if MATCHED_REFERENCE is not None:ledger['matched_reference_verified']=arm in REFERENCE_ARMS
                 (folder/(stem+'_ledger.json')).write_text(json.dumps(ledger,indent=2,allow_nan=False)+'\n')
                 completed.append(dict(pair=pair,arm=arm,repetition=repeat));print(json.dumps(completed[-1]),flush=True)
                 (OUT/'progress.json').write_text(json.dumps(dict(completed=completed),indent=2)+'\n')
-    assert len(completed)==96
-    (OUT/'integrity.json').write_text(json.dumps(dict(completed_fits=96,exact_full_replays=24,exact_repeat_fits=48,
-        attempted_updates=21168,training_loss_calls=22032,exact_pose_replays=36),indent=2)+'\n')
+    repeats=2*len(PAIRS);assert len(completed)==repeats*len(ARMS)
+    integrity=dict(completed_fits=len(completed),exact_full_replays=repeats*sum(a.startswith('full') for a in ARMS),
+        exact_repeat_fits=len(PAIRS)*len(ARMS),attempted_updates=repeats*sum(9*settings(a,n)[1] for a in ARMS),
+        training_loss_calls=repeats*sum(9*(settings(a,n)[1]+1) for a in ARMS),
+        exact_pose_replays=repeats*sum(KINDS[a].startswith('fgr') for a in ARMS))
+    if MATCHED_REFERENCE is not None:integrity['exact_matched_replays']=repeats*len(REFERENCE_ARMS)
+    (OUT/'integrity.json').write_text(json.dumps(integrity,indent=2)+'\n')
     from dense_trajectory_report import main as report
     report()
 

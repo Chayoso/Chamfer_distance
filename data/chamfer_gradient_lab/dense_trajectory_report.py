@@ -4,13 +4,16 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from ndp_dense_trajectory import ROOT,OUT,OLD,PAIRS,ARMS,PRIMARY,np,allocation,settings,deterministic,exact_reference
+from ndp_dense_trajectory import MATCHED_REFERENCE,REFERENCE_ARMS
 
 BASES=ARMS[:4]
 
 
 def collect():
     n=allocation();rows=[];saved={}
-    assert json.loads((OUT/'integrity.json').read_text())['completed_fits']==96
+    integrity=json.loads((OUT/'integrity.json').read_text())
+    assert integrity['completed_fits']==2*len(PAIRS)*len(ARMS)
+    if MATCHED_REFERENCE is not None:assert integrity['exact_matched_replays']==2*len(PAIRS)*len(REFERENCE_ARMS)
     poses={r['pair']:r['transform'] for r in json.loads((ROOT/'paper_revision/fgr_20261018/observed.json').read_text())['rows']}
     for repeat in (0,1):
         for pair in PAIRS:
@@ -44,6 +47,9 @@ def collect():
                 else:assert ledger['pose'] is None and ledger['preparation_seconds']==0
                 if arm.startswith('full'):
                     assert ledger['exact_full_replay'];exact_reference(folder,OLD/'r0'/kind,stem,result,updates)
+                if MATCHED_REFERENCE is not None:
+                    assert ledger['matched_reference_verified']==(arm in REFERENCE_ARMS)
+                    if arm in REFERENCE_ARMS:exact_reference(folder,MATCHED_REFERENCE/'r0'/arm,stem,result,updates)
                 if repeat:
                     old=saved[pair,arm]
                     assert deterministic(result)==deterministic(old[0]) and deterministic(updates)==deterministic(old[1])
@@ -59,7 +65,7 @@ def collect():
     return rows
 
 
-def assess(rows,primary=PRIMARY,candidates=ARMS[4:],attribution_bases=ARMS[4:7]):
+def assess(rows,primary=PRIMARY,candidates=ARMS[4:],attribution_bases=ARMS[4:-1]):
     index={(r['repetition'],r['pair'],r['arm']):r for r in rows};gates=[];comparisons=[];attribution=[]
     mean=lambda seq,key:float(np.mean([r[key] for r in seq]))
     for repeat in (0,1):
@@ -112,13 +118,14 @@ def figure(rows):
 
 def main():
     rows=collect();comparisons,gates,attribution=assess(rows)
-    result=dict(completed_fits=96,development_pairs=6,repetitions=2,updates_per_short_level=16,
+    result=dict(completed_fits=2*len(PAIRS)*len(ARMS),development_pairs=6,repetitions=2,updates_per_short_level=allocation(),
         numerical_gate=True,passed_cells=sum(g['passed'] for g in gates),required_cells=36,
         advance_to_new_scenes=all(g['passed'] for g in gates),adopted=False,new_scenes=0,
         failed_cells=[g for g in gates if not g['passed']],comparisons=comparisons,attribution=attribution)
     for name,value in (('summary.json',result),('pairs.json',rows),('gates.json',gates)):
         (OUT/name).write_text(json.dumps(value,indent=2,allow_nan=False)+'\n')
-    lines=['One budget-allocation study: six reused pairs, eight arms, two executions; not96 independent samples.']
+    label='eight' if len(ARMS)==8 else str(len(ARMS))
+    lines=[f'One budget-allocation study: six reused pairs, {label} arms, two executions; not{len(rows)} independent samples.']
     lines += [str(r) for r in comparisons if r['arm']==PRIMARY]+['Attribution:']+[str(r) for r in attribution]
     lines += ['Gates:']+[str(g) for g in gates]+[f"Advance to new scenes: {result['advance_to_new_scenes']}. Adopted: False."]
     (OUT/'summary.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines));figure(rows)
