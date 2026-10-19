@@ -4,8 +4,8 @@ Purpose and current scope
 Study where a global correspondence direction loses usefulness: its point field,
 its transfer through a neural deformation model, observed-loss mixing, or actual
 nonlinear application. Chamfer + Adam remains the baseline. No candidate has
-passed the complete adoption protocol. The latest normalization-aware mixture
-is a local screen candidate, not an adopted full registration pipeline.
+passed the complete adoption protocol. Normalization-aware mixing and a finite
+first-accepted ray search are experimental components, not adopted pipelines.
 
 Data flow
  Observed source X and target Y
@@ -77,6 +77,16 @@ Only the scalar rule changes; anchor, PCG, CD reference and controller are share
 pipeline/native_mix.py exposes the candidate; trajectory_mix.py can apply it
 within a declared own-history research trajectory. This is not adoption.
 
+The experimental pipeline/ray_search.py component reuses the same PCG and
+CD-GD rays through native_mix.py's fgr_search builder. It checks beta=j/8,
+j=0,...,8, in increasing order, recomputes the normalized neural JVP, and runs
+the unchanged native cap1 controller. It returns the FIRST accepted ray and
+its already evaluated output; if all reject, it returns a zero update.
+GT, task errors and pair-specific preferences never rank these rays. The .5
+slope-retention constraint is absent from this method; actual Armijo and motion
+acceptance remain required. Time every failed ray, builder and normalization.
+This helper preserves its caller's parameters and is not yet a trajectory arm.
+
 Native acceptance and optimizer state
 Evaluate actual float32 parameters/output, not only the linear prediction.
 For each declared cap, halve at most 20 times and require observed-CD Armijo
@@ -127,6 +137,7 @@ Code map
  pipeline/model.py, datasets.py, runner.py, optim.py: native model/data and loops.
  pipeline/lifting.py, head.py: matrix-free ridge and affine-head preconditioning.
  pipeline/direction_mix.py, native_mix.py, trust.py: scalar mixing and native trials.
+ pipeline/ray_search.py: fixed-grid first native-accepted direction and full cost.
  pipeline/trajectory_mix.py, prefix.py: own-history replacement and stage outputs.
  pipeline/update_geometry.py, event_chain.py: evaluation-only movement observers.
  ndp_*_probe.py: scoped experiments with explicit reference dependencies.

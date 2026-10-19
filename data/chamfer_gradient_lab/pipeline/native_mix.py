@@ -12,7 +12,7 @@ from .head import translation_lift, head_preconditioner
 
 
 def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None):
-    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix','fgr_normmix'):
+    if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix','fgr_normmix','fgr_search'):
         raise ValueError('Unknown production direction')
     total_begin=begin=tick(inputs)
     native=layer(inputs)[0].detach();initial=float(cd(native,target))
@@ -30,7 +30,7 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         'adam':(), 'cd_ridge':(('cd','ridge'),),
         'fgr_gdmix':(('cd','gd'),('fgr','gd')), 'fgr_ridgemix':(('cd','gd'),('fgr','ridge')),
         'fgr_headmix':(('cd','gd'),('fgr','head')),'fgr_pcgmix':(('cd','gd'),('fgr','pcg')),
-        'fgr_normmix':(('cd','gd'),('fgr','pcg'))}
+        'fgr_normmix':(('cd','gd'),('fgr','pcg')),'fgr_search':(('cd','gd'),('fgr','pcg'))}
     for field,transfer in needed[method]:
         begin=tick(inputs);force=forces[field]
         if transfer=='gd':raw=transpose(force)
@@ -69,8 +69,10 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         result[name]=dict(delta=delta,velocity=velocity,beta=beta,
             seconds=tick(inputs)-begin+a['seconds']+c['seconds'])
     native=native.double();production_seconds=tick(inputs)-total_begin
-    return dict(native=native,initial=initial,start=start,gradient=gradient,bound=bound,
+    value=dict(native=native,initial=initial,start=start,gradient=gradient,bound=bound,
                 setup_seconds=setup,production_seconds=production_seconds,directions=result,solvers=solvers)
+    if method=='fgr_search':value['forward']=forward
+    return value
 
 
 def native_trials(layer,inputs,target,native,initial,delta,velocity,gradient,caps=(1/16,.25,1.)):
