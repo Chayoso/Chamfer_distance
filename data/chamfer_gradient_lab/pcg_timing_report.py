@@ -8,13 +8,14 @@ OUT=base.ROOT/'paper_revision/pcg_timing_20261018'
 def read(name):return screen.read(OUT,name)
 
 
-def main():
+def main(out=OUT,probe_module=probe,primary='fgr_pcgmix',cost_key='pcg_seconds'):
+    OUT=out;probe=probe_module;read=lambda name:screen.read(OUT,name)
     summaries=[];finite={}
     for repeat in (0,1):
         probe.OUT=OUT/f'r{repeat}';probe.report()
         summaries.append(json.loads((probe.OUT/'summary.json').read_text()))
         finite.update({(r['pair'],r['level'],repeat):r for r in screen.read(probe.OUT,'finite')
-            if r['method']=='fgr_pcgmix' and r['policy']=='trust' and r['cap']==1})
+            if r['method']==primary and r['policy']=='trust' and r['cap']==1})
         for name in ('finite','reference_finite','directions','reference_directions','solvers','states'):
             current=screen.read(probe.OUT,name)
             old=screen.read(OUT/'r0',name)
@@ -28,7 +29,7 @@ def main():
     costs={(r['pair'],r['level'],r['repetition']):r for r in speed}
     for r in budget:
         key=(r['pair'],r['level'],r['repetition']);cost=costs[key]
-        assert r['budget']==cost['pcg_seconds']+cost['fgr_seconds']/(9 if r['account']=='amortized' else 1)
+        assert r['budget']==cost[cost_key]+cost['fgr_seconds']/(9 if r['account']=='amortized' else 1)
         assert all(v==finite[key][k] for k,v in r['candidate'].items())
     for r in read('adam'):histories[r['pair'],r['level'],r['repetition']].append(r)
     for key,history in histories.items():
@@ -65,7 +66,7 @@ def main():
             selected=[r for r in speed if r['pair'] in pairs and r['repetition']==repeat]
             record=dict(group=group,repetition=repeat)
             for label,weight in (('operations',0),('amortized',1/9),('full',1)):
-                record[label]=float(base.np.median([(r['default_seconds']+weight*r['fgr_seconds'])/(r['pcg_seconds']+weight*r['fgr_seconds']) for r in selected]))
+                record[label]=float(base.np.median([(r['default_seconds']+weight*r['fgr_seconds'])/(r[cost_key]+weight*r['fgr_seconds']) for r in selected]))
             speeds.append(record)
     required=[r for r in counts if r['tolerance']==1e-12 and r['baseline'] in ('after','best')]
     assert len(required)==16
@@ -86,10 +87,10 @@ def main():
     lines += [str(r) for r in groups]+[str(r) for r in speeds]
     lines += ['Gates: '+str({k:v for k,v in result.items() if k not in ('groups','speeds','failed_time_cells','failed_speed_cells')})]
     lines += ['Failed time cells: '+str(result['failed_time_cells']),'Failed speed cells: '+str(result['failed_speed_cells'])]
-    (OUT/'summary.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines));figure(result)
+    (OUT/'summary.txt').write_text('\n'.join(lines)+'\n');print('\n'.join(lines));figure(result,OUT,'PCG mix' if primary=='fgr_pcgmix' else 'Norm. mix')
 
 
-def figure(result):
+def figure(result,out=OUT,label='PCG mix'):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -101,11 +102,12 @@ def figure(result):
             axes[0,col].bar(base.np.arange(3)+offset,values,.36,label=f'Repetition {repeat+1}')
             row=next(r for r in result['speeds'] if r['group']==group and r['repetition']==repeat)
             axes[1,col].bar(base.np.arange(3)+offset,[row[k] for k in ('operations','amortized','full')],.36)
-        axes[0,col].set(title=group,xticks=range(3),xticklabels=('PCG mix','Best Adam\namortized','Best Adam\nfull'),ylabel='Task-MSE descent states')
+        axes[0,col].set(title=group,xticks=range(3),xticklabels=(label,'Best Adam\namortized','Best Adam\nfull'),ylabel='Task-MSE descent states')
         axes[0,col].legend(fontsize=8)
         axes[1,col].axhline(1,color='black',ls=':',lw=1)
-        axes[1,col].set(xticks=range(3),xticklabels=('Operations','+ FGR / 9','+ full FGR'),ylabel='Median paired old / PCG time')
-    fig.tight_layout();fig.savefig(OUT/'timing.png',dpi=160);plt.close(fig)
+        ylabel='Median paired old / PCG time' if label=='PCG mix' else 'Median full-ridge / normalized-PCG time'
+        axes[1,col].set(xticks=range(3),xticklabels=('Operations','+ FGR / 9','+ full FGR'),ylabel=ylabel)
+    fig.tight_layout();fig.savefig(out/'timing.png',dpi=160);plt.close(fig)
 
 
 if __name__=='__main__':main()

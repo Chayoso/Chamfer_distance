@@ -14,7 +14,7 @@ from .head import translation_lift, head_preconditioner
 def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None):
     if method not in (None,'adam','cd_ridge','fgr_gdmix','fgr_ridgemix','fgr_headmix','fgr_pcgmix','fgr_normmix'):
         raise ValueError('Unknown production direction')
-    begin=tick(inputs)
+    total_begin=begin=tick(inputs)
     native=layer(inputs)[0].detach();initial=float(cd(native,target))
     model=copy.deepcopy(layer).double();model._forward_pre_hooks.clear()
     x,q=inputs.double(),target.double()
@@ -68,8 +68,9 @@ def directions(layer, inputs, target, anchor, seed, method=None, adam_delta=None
         name='fgr_normmix' if method=='fgr_normmix' else 'fgr_'+transfer+'mix'
         result[name]=dict(delta=delta,velocity=velocity,beta=beta,
             seconds=tick(inputs)-begin+a['seconds']+c['seconds'])
-    return dict(native=native.double(),initial=initial,start=start,gradient=gradient,bound=bound,
-                setup_seconds=setup,directions=result,solvers=solvers)
+    native=native.double();production_seconds=tick(inputs)-total_begin
+    return dict(native=native,initial=initial,start=start,gradient=gradient,bound=bound,
+                setup_seconds=setup,production_seconds=production_seconds,directions=result,solvers=solvers)
 
 
 def native_trials(layer,inputs,target,native,initial,delta,velocity,gradient,caps=(1/16,.25,1.)):

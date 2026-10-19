@@ -8,8 +8,8 @@ OLD=base.ROOT/'paper_revision/head_preconditioner_20261018'
 PRIMARY='fgr_normmix'
 
 
-def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
-    order=('fgr_pcgmix',PRIMARY) if (base.PAIRS.index(pair)+level)%2==0 else (PRIMARY,'fgr_pcgmix')
+def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds,repetition=0):
+    order=('fgr_pcgmix',PRIMARY) if (base.PAIRS.index(pair)+level+repetition)%2==0 else (PRIMARY,'fgr_pcgmix')
     results={name:native.directions(layer,inputs,target,anchor,93000+100*pair+level,method=name) for name in order}
     result,old=results[PRIMARY],results['fgr_pcgmix'];rays=result['directions']
     for name in ('cd_gd','fgr_pcg'):
@@ -17,17 +17,17 @@ def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
     assert rays[PRIMARY]['beta']<=old['directions']['fgr_pcgmix']['beta']
     before=[p.detach().double().clone() for p in layer.parameters()]
     path=base.continuation(layer,opt,inputs,target,base.cd,steps=1)
-    _,start,_,_=next(path);_,_,_,params=next(path)
+    _,start,_,_=next(path);_,adam_after,_,params=next(path);adam_after=adam_after.detach()
     adam=[v.detach().double()-p for v,p in zip(params,before)];path.close()
     check=native.directions(layer,inputs,target,None,93000+100*pair+level,method='adam',adam_delta=adam)
     assert base.torch.equal(start.double(),result['native']) and result['initial']==STATES[pair,level]['native_cd']
     rays['adam']=check['directions']['adam'];gt=truth.double();task=2*(result['start']-gt)/len(gt)
-    base.append('solvers',dict(pair=pair,level=level,field='fgr',**result['solvers']['fgr']))
+    base.append('solvers',dict(pair=pair,level=level,field='fgr',**result['solvers']['fgr']));costs={};candidate=None
     for method in ('cd_gd','adam','fgr_pcg',*order):
         item=old['directions'][method] if method=='fgr_pcgmix' else rays[method];velocity=item['velocity']
         row=dict(pair=pair,level=level,method=method,risk_derivative=float((task*velocity).sum()),
             cd_derivative=float((result['gradient']*velocity).sum()),motion_bound=result['bound'],output_norm=float(velocity.norm()),
-            setup_seconds=result['setup_seconds'],direction_seconds=item['seconds'],anchor_seconds=anchor_seconds,beta=item.get('beta'))
+            setup_seconds=results.get(method,result)['setup_seconds'],direction_seconds=item['seconds'],anchor_seconds=anchor_seconds,beta=item.get('beta'))
         if method!=PRIMARY:
             for key in ('risk_derivative','cd_derivative','motion_bound','output_norm'):
                 base.np.testing.assert_allclose(row[key],D[pair,level,method][key],rtol=1e-10,atol=1e-12)
@@ -38,8 +38,13 @@ def compare(pair,level,layer,opt,inputs,target,truth,anchor,anchor_seconds):
                 saved=F[pair,level,method,trial['policy'],trial['cap']]
                 assert all(v==saved[k] for k,v in value.items() if k!='controller_seconds'),(pair,level,method)
             base.append('reference_finite' if method=='fgr_pcgmix' else 'finite',value)
+            if method in order and trial['policy']=='trust' and trial['cap']==1:
+                costs[method]=results[method]['production_seconds']+anchor_seconds+trial['controller_seconds']
+                if method==PRIMARY:candidate={k:value[k] for k in ('risk_change','epe_change','mse_identity_error','cd_change','fraction')}
     base.append('states',dict(pair=pair,level=level,native_cd=result['initial'],exact_common_controls=True))
     (OUT/'progress.json').write_text(base.json.dumps(dict(pair=pair,level=level))+'\n')
+    return dict(native=result['native'],initial=result['initial'],adam_after=adam_after,costs=costs,candidate=candidate,
+        builder_seconds={m:results[m]['production_seconds'] for m in order})
 
 
 def report():

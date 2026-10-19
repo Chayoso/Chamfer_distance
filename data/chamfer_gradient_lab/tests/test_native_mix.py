@@ -43,6 +43,7 @@ def test_restricted_direction_and_single_cap_match_diagnostic_path(monkeypatch):
     for method,expected_calls in [('cd_ridge',1),('fgr_gdmix',0),('fgr_ridgemix',1)]:
         calls.clear();limited=directions(model,x,q,anchor,19,method=method)
         assert len(calls)==expected_calls
+        assert limited['production_seconds']>=limited['setup_seconds']+limited['directions'][method]['seconds']
         for a,b in zip(limited['directions'][method]['delta'],full['directions'][method]['delta']):
             torch.testing.assert_close(a,b,rtol=0,atol=0)
         a=limited['directions'][method]

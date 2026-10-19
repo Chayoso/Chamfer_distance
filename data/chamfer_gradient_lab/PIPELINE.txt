@@ -161,6 +161,12 @@ Do not substitute arbitrary same-key NPZs or fabricate prerequisite records.
  ndp_normalized_mix_probe.py [--report-only]
    Checks normalized mixing at54 stopping endpoints against native_mix_20261018
    and head_preconditioner_20261018 controls; writes normalized_mix_20261018.
+ ndp_normalized_timing.py [--report-only]
+   Repeats the54-state screen twice and compares original-history Adam at both
+   measured budgets. Times the whole restricted direction builder, including
+   field construction, all inner products and native-output conversion. Checks
+   all80 native/16 time cells and the earlier full-ridge speed condition. The
+   previous PCG mixture is also timed separately. Diagnostic GT work is excluded.
 Earlier source/reference dependencies remain explicit in each probe. Existing
 verified artifacts may replace expensive regeneration; each probe checks its
 reference grid rather than silently constructing a different experiment.
